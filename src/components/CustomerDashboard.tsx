@@ -385,7 +385,7 @@ export const CustomerDashboard: React.FC = () => {
               >
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-amber-800 bg-amber-50 px-2.5 py-0.5 rounded-full">
-                    {apt.appointmentType}
+                    {apt.appointmentType || apt.type}
                   </span>
                   <span className="text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full">
                     {apt.status}

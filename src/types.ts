@@ -115,7 +115,9 @@ export interface TimelineEvent {
 export interface QuotationItem {
   id: string;
   title: string;
+  description?: string;
   amount: number;
+  price?: number;
 }
 
 export interface Quotation {
@@ -127,6 +129,7 @@ export interface Quotation {
   totalAmount: number;
   status: 'Pending' | 'Accepted' | 'Declined';
   sentDate: string;
+  validUntil?: string;
   notes?: string;
 }
 
@@ -166,9 +169,11 @@ export interface Appointment {
   id: string;
   customerId: string;
   customerName: string;
+  customerPhone?: string;
   tailorId: string;
   tailorShop: string;
-  type: 'Measurement' | 'Consultation' | 'Fitting' | 'Pickup';
+  type: 'Measurement' | 'Consultation' | 'Fitting' | 'Pickup' | string;
+  appointmentType?: string;
   date: string;
   timeSlot: string;
   address: string;

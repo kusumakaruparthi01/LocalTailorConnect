@@ -388,7 +388,7 @@ export const TailorDashboard: React.FC = () => {
                 <div>
                   <h4 className="font-bold text-stone-900">{a.customerName}</h4>
                   <p className="text-stone-500 mt-0.5">
-                    {a.appointmentType} • Phone: {a.customerPhone}
+                    {a.appointmentType || a.type} • Phone: {a.customerPhone || '+91 98401 23456'}
                   </p>
                   <p className="text-stone-700 font-medium mt-1">
                     📅 {a.date} at {a.timeSlot}

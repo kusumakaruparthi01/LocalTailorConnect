@@ -365,18 +365,18 @@ export const LandingPage: React.FC = () => {
           {services.map((srv, idx) => (
             <div
               key={idx}
-              className="bg-white rounded-2xl overflow-hidden border border-stone-200/80 shadow-sm hover:shadow-md transition-all group flex flex-col justify-between"
+              className="atelier-card rounded-2xl overflow-hidden group flex flex-col justify-between"
             >
               <div className="relative h-48 overflow-hidden">
                 <img
                   src={srv.image}
                   alt={srv.title}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                 />
-                <div className="absolute top-3 left-3 bg-stone-900/80 backdrop-blur-md text-white px-2.5 py-1 rounded-full text-[10px] font-semibold tracking-wide uppercase">
+                <div className="absolute top-3 left-3 bg-stone-950/80 backdrop-blur-md text-stone-200 px-3 py-1 rounded-full text-[10px] font-semibold tracking-wider uppercase border border-white/10">
                   {srv.category}
                 </div>
-                <div className="absolute bottom-3 right-3 bg-white/95 backdrop-blur-md text-stone-900 px-3 py-1 rounded-lg text-xs font-bold shadow-xs">
+                <div className="absolute bottom-3 right-3 badge-gold px-3 py-1 rounded-lg text-xs font-bold shadow-sm">
                   From {srv.startingPrice}
                 </div>
               </div>

@@ -68,41 +68,47 @@ export const Navbar: React.FC = () => {
   return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-stone-200/80 shadow-xs">
       {/* Demo Switcher Bar */}
-      <div className="bg-stone-900 text-stone-300 text-xs px-4 py-1.5 flex flex-wrap items-center justify-between border-b border-stone-800">
-        <div className="flex items-center gap-2">
-          <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          <span className="font-medium text-stone-200">Interactive Role Switcher:</span>
-          <span className="hidden sm:inline text-stone-400">Click any role to test full workflows</span>
+      <div className="bg-stone-950 text-stone-300 text-xs px-4 py-2 flex flex-wrap items-center justify-between border-b border-amber-900/30 shadow-inner">
+        <div className="flex items-center gap-2.5">
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+          </span>
+          <span className="font-semibold text-stone-200 tracking-wide">Live Prototype Mode:</span>
+          <span className="hidden sm:inline text-stone-400 text-[11px]">Switch perspectives instantly to test real workflows</span>
         </div>
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 sm:gap-2">
           <button
             onClick={() => setRole('customer')}
-            className={`px-2.5 py-1 rounded text-xs font-medium transition-all ${
+            className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
               role === 'customer'
-                ? 'bg-amber-600 text-white font-semibold shadow-xs'
-                : 'bg-stone-800 text-stone-300 hover:bg-stone-700'
+                ? 'bg-gradient-to-r from-amber-600 to-amber-700 text-white shadow-sm ring-1 ring-amber-400/50'
+                : 'bg-stone-900 text-stone-400 hover:text-stone-200 hover:bg-stone-800'
             }`}
           >
+            <span className={`w-1.5 h-1.5 rounded-full ${role === 'customer' ? 'bg-white' : 'bg-stone-600'}`}></span>
             Customer (Priya)
           </button>
           <button
             onClick={() => setRole('tailor')}
-            className={`px-2.5 py-1 rounded text-xs font-medium transition-all ${
+            className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
               role === 'tailor'
-                ? 'bg-amber-600 text-white font-semibold shadow-xs'
-                : 'bg-stone-800 text-stone-300 hover:bg-stone-700'
+                ? 'bg-gradient-to-r from-emerald-600 to-emerald-700 text-white shadow-sm ring-1 ring-emerald-400/50'
+                : 'bg-stone-900 text-stone-400 hover:text-stone-200 hover:bg-stone-800'
             }`}
           >
+            <span className={`w-1.5 h-1.5 rounded-full ${role === 'tailor' ? 'bg-white' : 'bg-stone-600'}`}></span>
             Tailor (Lakshmi)
           </button>
           <button
             onClick={() => setRole('admin')}
-            className={`px-2.5 py-1 rounded text-xs font-medium transition-all ${
+            className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
               role === 'admin'
-                ? 'bg-amber-600 text-white font-semibold shadow-xs'
-                : 'bg-stone-800 text-stone-300 hover:bg-stone-700'
+                ? 'bg-gradient-to-r from-indigo-600 to-indigo-700 text-white shadow-sm ring-1 ring-indigo-400/50'
+                : 'bg-stone-900 text-stone-400 hover:text-stone-200 hover:bg-stone-800'
             }`}
           >
+            <span className={`w-1.5 h-1.5 rounded-full ${role === 'admin' ? 'bg-white' : 'bg-stone-600'}`}></span>
             Admin (Rajesh)
           </button>
         </div>

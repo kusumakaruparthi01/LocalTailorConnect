@@ -40,9 +40,11 @@ export const AppointmentBookingModal: React.FC = () => {
       customerId: customer.id,
       customerName: customer.name,
       customerPhone: customer.phone,
+      type: appointmentType,
+      appointmentType,
       date,
       timeSlot,
-      appointmentType,
+      address: tailor.address,
       notes,
     });
     setIsAppointmentModalOpen(false);

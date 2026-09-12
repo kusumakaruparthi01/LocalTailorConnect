@@ -67,18 +67,38 @@ interface AppContextType {
   addToast: (type: 'success' | 'info' | 'warning', title: string, message: string) => void;
   removeToast: (id: string) => void;
 
+  // Active tailor context
+  tailorProfile: Tailor;
+  setTailorProfile: (tailor: Tailor) => void;
+
   // Actions
   addMeasurementProfile: (profile: Omit<MeasurementProfile, 'id' | 'customerId' | 'updatedAt'>) => void;
   updateMeasurementProfile: (id: string, updates: Partial<MeasurementProfile>) => void;
   deleteMeasurementProfile: (id: string) => void;
   createOrderRequest: (orderData: Partial<Order>) => string;
   updateOrderStatus: (orderId: string, newStatus: OrderStatus, note?: string) => void;
-  sendQuotation: (quotation: Omit<Quotation, 'id' | 'sentDate'>) => void;
+  sendQuotation: (quotationOrOrderId: any, possibleQuoteData?: any) => void;
   respondToQuotation: (orderId: string, accept: boolean) => void;
   completePayment: (orderId: string, method: string) => void;
-  bookAppointment: (apt: Omit<Appointment, 'id' | 'status'>) => void;
-  sendMessage: (text: string, orderId?: string, attachmentUrl?: string) => void;
+  markOrderAsPaid: (orderId: string) => void;
+  bookAppointment: (apt: any) => void;
+  sendMessage: (
+    textOrPayload: string | { text: string; orderId?: string; senderId?: string; senderName?: string; senderRole?: 'customer' | 'tailor'; recipientId?: string; attachmentUrl?: string },
+    orderId?: string,
+    attachmentUrl?: string
+  ) => void;
   submitReview: (tailorId: string, rating: number, comment: string, garmentType: string, breakdown: any) => void;
+  addReview: (
+    tailorId: string,
+    reviewData: {
+      customerName?: string;
+      rating: number;
+      comment: string;
+      garmentType?: string;
+      date?: string;
+      breakdown?: any;
+    }
+  ) => void;
   toggleSavedTailor: (tailorId: string) => void;
   verifyTailor: (tailorId: string, isVerified: boolean) => void;
   markNotificationAsRead: (id: string) => void;
@@ -146,6 +166,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [selectedOrderId, setSelectedOrderId] = useState<string>('LTC-10482');
   const [selectedCity, setSelectedCity] = useState<string>('Pudukkottai');
   const [pincode, setPincode] = useState<string>('622001');
+
+  const tailorProfile = tailors.find((t) => t.id === selectedTailorId) || tailors[0];
+  const setTailorProfile = (t: Tailor) => {
+    setSelectedTailorId(t.id);
+  };
 
   // Modals
   const [isCustomRequestOpen, setIsCustomRequestOpen] = useState(false);
@@ -356,23 +381,42 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     addToast('info', 'Status Updated', `Order #${orderId} marked as ${newStatus}`);
   };
 
-  const sendQuotation = (quoteData: Omit<Quotation, 'id' | 'sentDate'>) => {
+  const sendQuotation = (quotationOrOrderId: any, possibleQuoteData?: any) => {
     const quoteId = 'QT-' + (2000 + Math.floor(Math.random() * 900));
     const nowStr = 'Today, ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-    const newQuotation: Quotation = {
-      ...quoteData,
-      id: quoteId,
-      sentDate: nowStr,
-    };
+    let quoteData: Quotation;
+    if (typeof quotationOrOrderId === 'string' && possibleQuoteData) {
+      quoteData = {
+        id: quoteId,
+        orderId: quotationOrOrderId,
+        customerName: customer.name,
+        serviceName: possibleQuoteData.serviceName || 'Custom Stitching & Finishing',
+        items: (possibleQuoteData.items || []).map((it: any, idx: number) => ({
+          id: it.id || 'item_' + idx,
+          title: it.title || it.description || 'Stitching Service',
+          amount: it.amount ?? it.price ?? 0,
+        })),
+        totalAmount: possibleQuoteData.totalAmount || 0,
+        status: 'Pending',
+        sentDate: nowStr,
+        notes: possibleQuoteData.validUntil || possibleQuoteData.notes,
+      };
+    } else {
+      quoteData = {
+        ...quotationOrOrderId,
+        id: quoteId,
+        sentDate: nowStr,
+      };
+    }
 
     setOrders((prev) =>
       prev.map((ord) => {
         if (ord.id === quoteData.orderId) {
           return {
             ...ord,
-            totalAmount: newQuotation.totalAmount,
-            quotation: newQuotation,
+            totalAmount: quoteData.totalAmount || ord.totalAmount,
+            quotation: quoteData,
             status: ord.status === 'Request Received' ? 'Quote Sent' : ord.status,
           };
         }
@@ -385,7 +429,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       id: 'notif_' + Date.now(),
       userId: customer.id,
       title: 'Quotation Received',
-      message: `${quoteData.serviceName}: Quotation #${quoteId} for ₹${newQuotation.totalAmount} has been sent.`,
+      message: `${quoteData.serviceName || 'Tailor Quote'}: Quotation #${quoteId} for ₹${quoteData.totalAmount} has been sent.`,
       timestamp: 'Just now',
       isRead: false,
       type: 'quote',
@@ -393,7 +437,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
     setNotifications((prev) => [newNotif, ...prev]);
 
-    addToast('success', 'Quotation Sent', `Quotation #${quoteId} for ₹${newQuotation.totalAmount} dispatched.`);
+    addToast('success', 'Quotation Sent', `Quotation #${quoteId} for ₹${quoteData.totalAmount} dispatched.`);
   };
 
   const respondToQuotation = (orderId: string, accept: boolean) => {
@@ -439,10 +483,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     addToast('success', 'Payment Successful', `Payment of order #${orderId} completed via ${method}.`);
   };
 
-  const bookAppointment = (apt: Omit<Appointment, 'id' | 'status'>) => {
+  const markOrderAsPaid = (orderId: string) => {
+    completePayment(orderId, 'Online Escrow (UPI / NetBanking)');
+  };
+
+  const bookAppointment = (apt: any) => {
+    const aptType = apt.type || apt.appointmentType || 'Fitting Trial';
+    const targetTailor = tailors.find((t) => t.id === apt.tailorId) || tailorProfile;
     const newApt: Appointment = {
       ...apt,
       id: 'apt_' + Date.now(),
+      type: aptType,
+      address: apt.address || targetTailor.address,
       status: 'Upcoming',
     };
     setAppointments((prev) => [newApt, ...prev]);
@@ -451,7 +503,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       id: 'notif_' + Date.now(),
       userId: customer.id,
       title: 'Appointment Confirmed',
-      message: `Your ${apt.type} appointment on ${apt.date} at ${apt.timeSlot} with ${apt.tailorShop} is scheduled.`,
+      message: `Your ${aptType} appointment on ${apt.date} at ${apt.timeSlot} with ${apt.tailorShop || targetTailor.shopName} is scheduled.`,
       timestamp: 'Just now',
       isRead: false,
       type: 'appointment',
@@ -461,39 +513,58 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     addToast('success', 'Appointment Booked', `Confirmed for ${apt.date} at ${apt.timeSlot}`);
   };
 
-  const sendMessage = (text: string, orderId?: string, attachmentUrl?: string) => {
-    const senderRole = role === 'tailor' ? 'tailor' : 'customer';
-    const senderName = role === 'tailor' ? 'Lakshmi R. (Tailor)' : customer.name;
+  const sendMessage = (
+    textOrPayload: string | { text: string; orderId?: string; senderId?: string; senderName?: string; senderRole?: 'customer' | 'tailor'; recipientId?: string; attachmentUrl?: string },
+    orderId?: string,
+    attachmentUrl?: string
+  ) => {
+    let actualText = '';
+    let targetOrderId = orderId || selectedOrderId;
+    let targetAttachment = attachmentUrl;
+    let sRole: 'customer' | 'tailor' = role === 'tailor' ? 'tailor' : 'customer';
+    let sName = role === 'tailor' ? (tailorProfile?.shopName || 'Lakshmi R. (Tailor)') : customer.name;
+    let sId = role === 'tailor' ? tailorProfile.id : customer.id;
+
+    if (typeof textOrPayload === 'object' && textOrPayload !== null) {
+      actualText = textOrPayload.text || '';
+      if (textOrPayload.orderId) targetOrderId = textOrPayload.orderId;
+      if (textOrPayload.attachmentUrl) targetAttachment = textOrPayload.attachmentUrl;
+      if (textOrPayload.senderRole) sRole = textOrPayload.senderRole;
+      if (textOrPayload.senderName) sName = textOrPayload.senderName;
+      if (textOrPayload.senderId) sId = textOrPayload.senderId;
+    } else {
+      actualText = String(textOrPayload || '');
+    }
 
     const newMsg: ChatMessage = {
       id: 'msg_' + Date.now(),
-      orderId: orderId || selectedOrderId,
-      senderId: role === 'tailor' ? 'tailor_01' : customer.id,
-      senderRole,
-      senderName,
-      text,
+      orderId: targetOrderId,
+      senderId: sId,
+      senderRole: sRole,
+      senderName: sName,
+      text: actualText,
       timestamp: 'Today, ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       isRead: true,
-      attachmentUrl,
+      attachmentUrl: targetAttachment,
     };
 
     setMessages((prev) => [...prev, newMsg]);
 
     // Simulated instant reply if customer is messaging and tailor is offline
-    if (role === 'customer') {
+    if (sRole === 'customer') {
       setTimeout(() => {
         const autoReply: ChatMessage = {
           id: 'msg_reply_' + Date.now(),
-          orderId: orderId || selectedOrderId,
-          senderId: 'tailor_01',
+          orderId: targetOrderId,
+          senderId: tailorProfile.id,
           senderRole: 'tailor',
-          senderName: 'Lakshmi R. (Tailor)',
+          senderName: tailorProfile.shopName,
           text: 'Got your message! I will make sure the changes are included during our evening stitching batch.',
           timestamp: 'Just now',
           isRead: false,
         };
         setMessages((prev) => [...prev, autoReply]);
-        addToast('info', 'New Message', 'Lakshmi Stitching Studio replied to your message.');
+        addToast('info', 'New Message', `${tailorProfile.shopName} replied to your message.`);
       }, 1400);
     }
   };
@@ -534,6 +605,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
 
     addToast('success', 'Review Submitted', 'Thank you for rating and reviewing your tailor!');
+  };
+
+  const addReview = (
+    tailorId: string,
+    reviewData: {
+      customerName?: string;
+      rating: number;
+      comment: string;
+      garmentType?: string;
+      date?: string;
+      breakdown?: any;
+    }
+  ) => {
+    submitReview(
+      tailorId,
+      reviewData.rating,
+      reviewData.comment,
+      reviewData.garmentType || 'Custom Garment',
+      reviewData.breakdown || {
+        stitchingQuality: 5,
+        fitting: 5,
+        deliveryTime: 5,
+        communication: 5,
+        valueForMoney: 5,
+      }
+    );
   };
 
   const toggleSavedTailor = (tailorId: string) => {
@@ -613,11 +710,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         sendQuotation,
         respondToQuotation,
         completePayment,
+        markOrderAsPaid,
         bookAppointment,
         sendMessage,
         submitReview,
+        addReview,
         toggleSavedTailor,
         verifyTailor,
+        tailorProfile,
+        setTailorProfile,
         markNotificationAsRead,
         reorderPreviousOrder,
         isCustomRequestOpen,

@@ -5,14 +5,66 @@
   --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
 }
 
+:root {
+  --primary-gold: #c27803;
+  --primary-gold-dark: #92400e;
+  --emerald-accent: #047857;
+  --ivory-bg: #FAF8F5;
+  --ivory-surface: #FFFFFF;
+}
+
 body {
   font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
   background-color: #FAF8F5;
-  color: #1E293B;
+  color: #1c1917;
+  overflow-x: hidden;
 }
 
 .font-serif {
   font-family: 'Playfair Display', Georgia, serif;
+}
+
+/* Luxury Atelier Card with smooth inner glow and elevation */
+.atelier-card {
+  background: #ffffff;
+  border: 1px solid rgba(226, 217, 207, 0.8);
+  box-shadow: 0 4px 20px -2px rgba(28, 25, 23, 0.04), 0 2px 6px -1px rgba(28, 25, 23, 0.02);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.atelier-card:hover {
+  border-color: rgba(180, 83, 9, 0.3);
+  box-shadow: 0 12px 30px -4px rgba(180, 83, 9, 0.08), 0 4px 12px -2px rgba(28, 25, 23, 0.04);
+  transform: translateY(-2px);
+}
+
+/* Glassmorphism Panel */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+}
+
+/* Subtle gold shimmer badge */
+.badge-gold {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  color: #78350f;
+  border: 1px solid rgba(217, 119, 6, 0.3);
+}
+
+/* Luxury button styling */
+.btn-gold {
+  background: linear-gradient(135deg, #b45309 0%, #92400e 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 14px 0 rgba(180, 83, 9, 0.25);
+  transition: all 0.2s ease;
+}
+
+.btn-gold:hover {
+  background: linear-gradient(135deg, #92400e 0%, #78350f 100%);
+  box-shadow: 0 6px 20px 0 rgba(180, 83, 9, 0.35);
+  transform: translateY(-1px);
 }
 
 /* Custom subtle scrollbar */

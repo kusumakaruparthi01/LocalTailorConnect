@@ -69,10 +69,10 @@ export const QuotationModal: React.FC = () => {
               Work Breakdown
             </span>
             <div className="divide-y divide-stone-100 text-xs">
-              {quotation.items.map((it, idx) => (
+              {quotation.items.map((it: any, idx: number) => (
                 <div key={idx} className="py-2.5 flex items-center justify-between">
-                  <span className="text-stone-700">{it.description}</span>
-                  <span className="font-bold text-stone-900">₹{it.price}</span>
+                  <span className="text-stone-700">{it.description || it.title || 'Service Item'}</span>
+                  <span className="font-bold text-stone-900">₹{it.price ?? it.amount ?? 0}</span>
                 </div>
               ))}
             </div>
@@ -81,7 +81,7 @@ export const QuotationModal: React.FC = () => {
           <div className="p-4 bg-stone-50 rounded-2xl flex items-center justify-between border border-stone-200">
             <div>
               <span className="text-xs font-bold text-stone-900 block">Total Quotation</span>
-              <span className="text-[10px] text-stone-500">{quotation.validUntil}</span>
+              <span className="text-[10px] text-stone-500">{quotation.validUntil || 'Valid for 5 days'}</span>
             </div>
             <span className="font-serif text-2xl font-bold text-amber-900">
               ₹{quotation.totalAmount}
