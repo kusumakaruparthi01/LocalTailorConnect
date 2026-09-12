@@ -115,22 +115,25 @@ export const Navbar: React.FC = () => {
       </div>
 
       {/* Main Navbar */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between gap-4">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-4">
         {/* Logo & Brand */}
         <div className="flex items-center gap-6">
           <button
             onClick={() => setCurrentView('home')}
-            className="flex items-center gap-2.5 text-left group focus:outline-none"
+            className="flex items-center gap-3 text-left group focus:outline-none"
           >
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-700 to-amber-900 flex items-center justify-center text-white shadow-md shadow-amber-950/20 group-hover:scale-105 transition-transform">
+            <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-amber-700 via-amber-800 to-stone-950 flex items-center justify-center text-white shadow-lg shadow-amber-950/25 ring-1 ring-amber-500/40 group-hover:scale-105 group-hover:shadow-amber-950/40 transition-all">
               <Scissors className="w-5 h-5 text-amber-200" />
             </div>
             <div>
-              <div className="font-serif font-bold text-xl sm:text-2xl text-stone-900 tracking-tight leading-none group-hover:text-amber-800 transition-colors">
-                Local Tailor Connect
+              <div className="font-serif font-bold text-xl sm:text-2xl text-stone-950 tracking-tight leading-none group-hover:text-amber-800 transition-colors flex items-center gap-2">
+                <span>Local Tailor Connect</span>
+                <span className="hidden sm:inline-block px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-amber-100/90 text-amber-900 border border-amber-300/60">
+                  Atelier
+                </span>
               </div>
-              <span className="text-[11px] font-medium text-stone-500 tracking-wide block mt-0.5">
-                Your perfect fit, just around the corner
+              <span className="text-[11px] font-semibold text-stone-500 tracking-wide block mt-1">
+                India’s Premier Bespoke Tailoring & Alterations Platform
               </span>
             </div>
           </button>

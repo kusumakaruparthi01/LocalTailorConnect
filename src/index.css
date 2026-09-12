@@ -82,3 +82,52 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: #C4B5A5;
 }
+
+/* Luxury Atelier Styling Utilities */
+.atelier-gradient-hero {
+  background: radial-gradient(circle at 50% 0%, #FFFDF9 0%, #FAF6EE 50%, #F5EFE6 100%);
+}
+
+.atelier-mesh-bg {
+  background-color: #FAF8F5;
+  background-image: 
+    radial-gradient(at 15% 20%, rgba(217, 119, 6, 0.04) 0px, transparent 50%),
+    radial-gradient(at 85% 80%, rgba(180, 83, 9, 0.05) 0px, transparent 50%),
+    radial-gradient(at 50% 50%, rgba(245, 158, 11, 0.02) 0px, transparent 50%);
+}
+
+.atelier-subtle-pattern {
+  background-image: radial-gradient(rgba(146, 64, 14, 0.08) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.atelier-input {
+  background: #FFFFFF;
+  border: 1px solid #E2D9CF;
+  color: #1C1917;
+  transition: all 0.2s ease;
+}
+
+.atelier-input:focus {
+  outline: none;
+  border-color: #B45309;
+  box-shadow: 0 0 0 3px rgba(180, 83, 9, 0.12);
+}
+
+.atelier-pill-active {
+  background: #92400E;
+  color: #FFFFFF;
+  box-shadow: 0 2px 8px rgba(146, 64, 14, 0.25);
+}
+
+.badge-emerald {
+  background: #ECFDF5;
+  color: #065F46;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.text-gold-gradient {
+  background: linear-gradient(135deg, #92400E 0%, #D97706 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
