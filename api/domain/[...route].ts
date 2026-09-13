@@ -1,8 +1,8 @@
 import { and, desc, eq, inArray, or } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { z } from 'zod';
-import { canAccessOrder, requireAccountType } from '../../server/authz';
-import { db } from '../../server/db/client';
+import { canAccessOrder, requireAccountType } from '../../server/authz.js';
+import { db } from '../../server/db/client.js';
 import {
   appointments,
   measurementProfiles,
@@ -18,10 +18,10 @@ import {
   tailorProfiles,
   tailorServices,
   user,
-} from '../../server/db/schema';
-import { getActor, HttpError, sendError } from '../../server/http';
-import type { ApiRequest, ApiResponse } from '../../server/api-types';
-import { profileUpdateSchema } from '../../server/validation/profile';
+} from '../../server/db/schema.js';
+import { getActor, HttpError, sendError } from '../../server/http.js';
+import type { ApiRequest, ApiResponse } from '../../server/api-types.js';
+import { profileUpdateSchema } from '../../server/validation/profile.js';
 
 const idSchema = z.string().uuid();
 const text = (max: number) => z.string().trim().min(1).max(max);

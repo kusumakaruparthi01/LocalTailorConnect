@@ -1,1 +1,1 @@
-export { default } from './domain/[...route]';
+export { default } from './domain/[...route].js';

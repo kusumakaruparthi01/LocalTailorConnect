@@ -1,10 +1,10 @@
 import { eq } from 'drizzle-orm';
 import { fromNodeHeaders } from 'better-auth/node';
-import { auth } from './auth';
-import { db } from './db/client';
-import { adminUsers, tailorProfiles } from './db/schema';
-import type { AccountType, Actor } from './authz';
-import type { ApiRequest, ApiResponse } from './api-types';
+import { auth } from './auth.js';
+import { db } from './db/client.js';
+import { adminUsers, tailorProfiles } from './db/schema.js';
+import type { AccountType, Actor } from './authz.js';
+import type { ApiRequest, ApiResponse } from './api-types.js';
 
 export class HttpError extends Error {
   constructor(public status: number, message: string) {

@@ -1,7 +1,7 @@
 import type { ServerResponse } from 'node:http';
 import { toNodeHandler } from 'better-auth/node';
-import { auth } from '../server/auth';
-import type { ApiRequest } from '../server/api-types';
+import { auth } from '../server/auth.js';
+import type { ApiRequest } from '../server/api-types.js';
 
 const handler = toNodeHandler(auth);
 

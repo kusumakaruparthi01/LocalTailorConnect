@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import { eq } from 'drizzle-orm';
-import { db } from '../server/db/client';
-import { adminUsers, user } from '../server/db/schema';
+import { db } from '../server/db/client.js';
+import { adminUsers, user } from '../server/db/schema.js';
 
 const email = process.argv[2]?.trim().toLowerCase();
 if (!email) throw new Error('Usage: npm run admin:promote -- user@example.com');

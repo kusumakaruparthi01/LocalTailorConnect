@@ -1,8 +1,8 @@
 import 'dotenv/config';
 import { and, eq } from 'drizzle-orm';
-import { auth } from '../server/auth';
-import { db } from '../server/db/client';
-import { tailorProfiles, tailorServices, user } from '../server/db/schema';
+import { auth } from '../server/auth.js';
+import { db } from '../server/db/client.js';
+import { tailorProfiles, tailorServices, user } from '../server/db/schema.js';
 
 if (process.env.NODE_ENV === 'production' && process.env.ALLOW_PRODUCTION_SEED !== 'true') {
   throw new Error('Refusing to seed production without ALLOW_PRODUCTION_SEED=true');
