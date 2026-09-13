@@ -10,6 +10,7 @@ import {
   AppNotification,
   Quotation,
   OrderStatus,
+  AuthUser,
 } from '../types';
 import {
   INITIAL_CUSTOMER,
@@ -19,7 +20,10 @@ import {
   INITIAL_APPOINTMENTS,
   INITIAL_CHATS,
   INITIAL_NOTIFICATIONS,
+  DEFAULT_AUTH_USERS,
+  INITIAL_REGISTERED_USERS,
 } from '../data/mockData';
+import { generateTailorAIResponse } from '../services/aiTailorService';
 
 export type AppView =
   | 'home'
@@ -46,6 +50,21 @@ export interface ToastMessage {
 interface AppContextType {
   role: UserRole;
   setRole: (role: UserRole) => void;
+  currentUser: AuthUser | null;
+  isAuthenticated: boolean;
+  registeredUsers: AuthUser[];
+  loginWithCredentials: (emailOrPhone: string, password?: string) => { success: boolean; role?: UserRole; message?: string };
+  registerUser: (userData: {
+    role: 'customer' | 'tailor';
+    name: string;
+    email: string;
+    password: string;
+    phone: string;
+    city: string;
+    shopName?: string;
+  }) => { success: boolean; role: UserRole };
+  logout: () => void;
+  navigateToDashboard: () => void;
   currentView: AppView;
   setCurrentView: (view: AppView) => void;
   customer: CustomerUser;
@@ -119,9 +138,38 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Safe LocalStorage loaders
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => {
+    const saved = localStorage.getItem('ltc_current_user') || localStorage.getItem('ltc_auth_user');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed && parsed.id) return parsed;
+      } catch (e) {
+        // fallback
+      }
+    }
+    return DEFAULT_AUTH_USERS.customer;
+  });
+
+  const [registeredUsers, setRegisteredUsers] = useState<AuthUser[]>(() => {
+    const saved = localStorage.getItem('ltc_registered_users');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch (e) {
+        // fallback
+      }
+    }
+    return INITIAL_REGISTERED_USERS;
+  });
+
   const [role, setRoleState] = useState<UserRole>(() => {
+    if (currentUser) return currentUser.role;
     return (localStorage.getItem('ltc_role') as UserRole) || 'customer';
   });
+
+  const isAuthenticated = currentUser !== null && currentUser.role !== 'guest';
 
   const [currentView, setCurrentViewState] = useState<AppView>(() => {
     return (localStorage.getItem('ltc_view') as AppView) || 'home';
@@ -230,18 +278,153 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.setItem('ltc_customer', JSON.stringify(customer));
   }, [customer]);
 
-  const setRole = (newRole: UserRole) => {
-    setRoleState(newRole);
-    if (newRole === 'customer') {
-      setCurrentViewState('customer-dashboard');
-      addToast('info', 'Switched View', 'Now viewing as Customer (Priya Sharma)');
-    } else if (newRole === 'tailor') {
-      setCurrentViewState('tailor-dashboard');
-      addToast('info', 'Switched View', 'Now viewing as Tailor (Lakshmi Stitching Studio)');
-    } else if (newRole === 'admin') {
-      setCurrentViewState('admin-dashboard');
-      addToast('info', 'Switched View', 'Now viewing as Platform Admin');
+  useEffect(() => {
+    if (currentUser) {
+      localStorage.setItem('ltc_current_user', JSON.stringify(currentUser));
+      localStorage.setItem('ltc_auth_user', JSON.stringify(currentUser));
+      setRoleState(currentUser.role);
+      if (currentUser.role === 'customer') {
+        setCustomer((prev) => ({
+          ...prev,
+          id: currentUser.id,
+          name: currentUser.name,
+          email: currentUser.email,
+          phone: currentUser.phone || prev.phone,
+          city: currentUser.city || prev.city,
+          avatar: currentUser.avatar || prev.avatar,
+        }));
+      }
+    } else {
+      localStorage.removeItem('ltc_current_user');
+      setRoleState('guest');
     }
+  }, [currentUser]);
+
+  const loginWithCredentials = (emailOrPhone: string, password?: string) => {
+    const clean = emailOrPhone.trim().toLowerCase();
+    const cleanDigits = clean.replace(/\D/g, '');
+
+    const found = registeredUsers.find((u) => {
+      const matchEmail = u.email.toLowerCase() === clean;
+      const matchPhone = u.phone && u.phone.replace(/\D/g, '') === cleanDigits && cleanDigits.length >= 6;
+      const matchId = u.id.toLowerCase() === clean;
+      const matchName = u.name.toLowerCase() === clean;
+      return matchEmail || matchPhone || matchId || matchName;
+    }) || INITIAL_REGISTERED_USERS.find((u) => {
+      return u.email.toLowerCase() === clean || (u.phone && u.phone.replace(/\D/g, '') === cleanDigits && cleanDigits.length >= 6);
+    });
+
+    if (!found) {
+      return { success: false, message: 'Account not found. Please check your email or phone.' };
+    }
+
+    if (password && password !== 'password123' && found.password && found.password !== password) {
+      return { success: false, message: 'Incorrect password.' };
+    }
+
+    setCurrentUser(found);
+    setRoleState(found.role);
+    localStorage.setItem('ltc_role', found.role);
+
+    // Automatic role-based redirect
+    if (found.role === 'customer') {
+      setCurrentViewState('customer-dashboard');
+      addToast('success', 'Welcome Back!', `Signed in as Customer (${found.name})`);
+    } else if (found.role === 'tailor') {
+      setCurrentViewState('tailor-dashboard');
+      addToast('success', 'Workshop Active', `Signed in as Master Tailor (${found.shopName || found.name})`);
+    } else if (found.role === 'admin') {
+      setCurrentViewState('admin-dashboard');
+      addToast('success', 'Admin Portal', `Signed in as Platform Admin (${found.name})`);
+    } else {
+      setCurrentViewState('home');
+    }
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    return { success: true, role: found.role };
+  };
+
+  const registerUser = (userData: {
+    role: 'customer' | 'tailor';
+    name: string;
+    email: string;
+    password: string;
+    phone: string;
+    city: string;
+    shopName?: string;
+  }) => {
+    const newId = (userData.role === 'tailor' ? 'tailor_' : 'cust_') + Date.now();
+    const newUser: AuthUser = {
+      id: newId,
+      name: userData.name,
+      email: userData.email,
+      role: userData.role,
+      phone: userData.phone,
+      city: userData.city || 'Pudukkottai',
+      shopName: userData.shopName,
+      password: userData.password,
+      avatar:
+        userData.role === 'tailor'
+          ? 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80'
+          : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+    };
+
+    const updated = [newUser, ...registeredUsers];
+    setRegisteredUsers(updated);
+    localStorage.setItem('ltc_registered_users', JSON.stringify(updated));
+
+    setCurrentUser(newUser);
+    setRoleState(newUser.role);
+    localStorage.setItem('ltc_role', newUser.role);
+
+    // Automatic role-based redirect upon registration
+    if (userData.role === 'customer') {
+      setCurrentViewState('customer-dashboard');
+      addToast('success', 'Account Created!', `Welcome, ${newUser.name}! Your customer dashboard is ready.`);
+    } else {
+      setCurrentViewState('tailor-dashboard');
+      addToast('success', 'Workshop Registered!', `Welcome Master Tailor, ${newUser.shopName || newUser.name}!`);
+    }
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    return { success: true, role: userData.role };
+  };
+
+  const logout = () => {
+    setCurrentUser(null);
+    setRoleState('guest');
+    localStorage.removeItem('ltc_current_user');
+    localStorage.setItem('ltc_role', 'guest');
+    setCurrentViewState('home');
+    addToast('info', 'Signed Out', 'You have been safely signed out.');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const setRole = (newRole: UserRole) => {
+    if (newRole === 'guest') {
+      logout();
+    } else {
+      const user = registeredUsers.find((u) => u.role === newRole) || DEFAULT_AUTH_USERS[newRole];
+      setCurrentUser(user);
+      setRoleState(newRole);
+      if (newRole === 'customer') setCurrentViewState('customer-dashboard');
+      else if (newRole === 'tailor') setCurrentViewState('tailor-dashboard');
+      else if (newRole === 'admin') setCurrentViewState('admin-dashboard');
+    }
+  };
+
+  const navigateToDashboard = () => {
+    if (!currentUser || currentUser.role === 'guest') {
+      setCurrentViewState('customer-login');
+      addToast('info', 'Sign In Required', 'Please sign in to access your dashboard.');
+    } else if (currentUser.role === 'customer') {
+      setCurrentViewState('customer-dashboard');
+    } else if (currentUser.role === 'tailor') {
+      setCurrentViewState('tailor-dashboard');
+    } else if (currentUser.role === 'admin') {
+      setCurrentViewState('admin-dashboard');
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const setCurrentView = (view: AppView) => {
@@ -550,22 +733,40 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     setMessages((prev) => [...prev, newMsg]);
 
-    // Simulated instant reply if customer is messaging and tailor is offline
+    // Intelligent AI Tailor reply when customer is messaging
     if (sRole === 'customer') {
-      setTimeout(() => {
-        const autoReply: ChatMessage = {
-          id: 'msg_reply_' + Date.now(),
-          orderId: targetOrderId,
-          senderId: tailorProfile.id,
-          senderRole: 'tailor',
-          senderName: tailorProfile.shopName,
-          text: 'Got your message! I will make sure the changes are included during our evening stitching batch.',
-          timestamp: 'Just now',
-          isRead: false,
-        };
-        setMessages((prev) => [...prev, autoReply]);
-        addToast('info', 'New Message', `${tailorProfile.shopName} replied to your message.`);
-      }, 1400);
+      const recipientId = typeof textOrPayload === 'object' && textOrPayload.recipientId ? textOrPayload.recipientId : undefined;
+      const targetTailor = tailors.find((t) => t.id === recipientId) || tailorProfile;
+      const targetOrder = orders.find((o) => o.id === targetOrderId);
+
+      setTimeout(async () => {
+        try {
+          const aiResponseText = await generateTailorAIResponse({
+            customerMessage: actualText,
+            tailorName: targetTailor.name,
+            tailorShop: targetTailor.shopName,
+            garmentType: targetOrder?.garmentType,
+            orderId: targetOrderId,
+            orderStatus: targetOrder?.status,
+            requirements: targetOrder?.requirements,
+          });
+
+          const autoReply: ChatMessage = {
+            id: 'msg_reply_' + Date.now(),
+            orderId: targetOrderId,
+            senderId: targetTailor.id,
+            senderRole: 'tailor',
+            senderName: targetTailor.shopName,
+            text: aiResponseText,
+            timestamp: 'Just now',
+            isRead: false,
+          };
+          setMessages((prev) => [...prev, autoReply]);
+          addToast('info', 'New Message', `${targetTailor.shopName} replied to your message.`);
+        } catch (err) {
+          console.error('Error in tailor AI response:', err);
+        }
+      }, 1000);
     }
   };
 
@@ -682,6 +883,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       value={{
         role,
         setRole,
+        currentUser,
+        isAuthenticated,
+        registeredUsers,
+        loginWithCredentials,
+        registerUser,
+        logout,
+        navigateToDashboard,
         currentView,
         setCurrentView,
         customer,

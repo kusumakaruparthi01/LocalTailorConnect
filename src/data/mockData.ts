@@ -7,7 +7,57 @@ import {
   ChatMessage,
   AppNotification,
   Quotation,
+  AuthUser,
+  UserRole,
 } from '../types';
+
+export const DEFAULT_AUTH_USERS: Record<UserRole, AuthUser> = {
+  customer: {
+    id: 'cust_01',
+    name: 'Priya Sharma',
+    email: 'priya.sharma@example.com',
+    role: 'customer',
+    password: 'password123',
+    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+    phone: '+91 98401 23456',
+    city: 'Pudukkottai',
+  },
+  tailor: {
+    id: 'tailor_01',
+    name: 'Lakshmi R.',
+    email: 'lakshmi.studio@example.com',
+    role: 'tailor',
+    password: 'password123',
+    avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
+    phone: '+91 94432 18901',
+    city: 'Pudukkottai',
+    shopName: 'Lakshmi Stitching Studio',
+  },
+  admin: {
+    id: 'admin_01',
+    name: 'Rajesh Kumar',
+    email: 'rajesh.admin@localtailorconnect.in',
+    role: 'admin',
+    password: 'password123',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+    phone: '+91 98840 99881',
+    city: 'Chennai',
+  },
+  guest: {
+    id: 'guest_01',
+    name: 'Guest Explorer',
+    email: 'guest@localtailorconnect.in',
+    role: 'guest',
+    avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
+    city: 'Pudukkottai',
+  },
+};
+
+export const INITIAL_REGISTERED_USERS: AuthUser[] = [
+  DEFAULT_AUTH_USERS.customer,
+  DEFAULT_AUTH_USERS.tailor,
+  DEFAULT_AUTH_USERS.admin,
+];
 
 export const INITIAL_CUSTOMER: CustomerUser = {
   id: 'cust_01',
@@ -18,6 +68,7 @@ export const INITIAL_CUSTOMER: CustomerUser = {
   avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
   savedTailorIds: ['tailor_01', 'tailor_05'],
 };
+
 
 export const INITIAL_MEASUREMENT_PROFILES: MeasurementProfile[] = [
   {

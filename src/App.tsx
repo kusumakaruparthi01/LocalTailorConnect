@@ -18,6 +18,8 @@ import { AppointmentBookingModal } from './components/AppointmentBookingModal';
 import { ReviewModal } from './components/ReviewModal';
 import { QuotationModal } from './components/QuotationModal';
 
+import { RoleGuard } from './components/RoleGuard';
+
 const MainContent: React.FC = () => {
   const { currentView } = useApp();
 
@@ -35,9 +37,21 @@ const MainContent: React.FC = () => {
         {currentView === 'find-tailors' && <FindTailorsPage />}
         {currentView === 'tailor-profile' && <TailorProfilePage />}
         {currentView === 'smart-match' && <SmartMatcherPage />}
-        {currentView === 'customer-dashboard' && <CustomerDashboard />}
-        {currentView === 'tailor-dashboard' && <TailorDashboard />}
-        {currentView === 'admin-dashboard' && <AdminDashboard />}
+        {currentView === 'customer-dashboard' && (
+          <RoleGuard allowedRoles={['customer']} roleTitle="Customer Account">
+            <CustomerDashboard />
+          </RoleGuard>
+        )}
+        {currentView === 'tailor-dashboard' && (
+          <RoleGuard allowedRoles={['tailor']} roleTitle="Master Tailor Workshop">
+            <TailorDashboard />
+          </RoleGuard>
+        )}
+        {currentView === 'admin-dashboard' && (
+          <RoleGuard allowedRoles={['admin']} roleTitle="Platform Administrator">
+            <AdminDashboard />
+          </RoleGuard>
+        )}
         {currentView === 'track-order' && <OrderTrackingPage />}
         {currentView === 'payment' && <PaymentPage />}
         {(currentView === 'customer-login' ||

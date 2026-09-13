@@ -4,229 +4,352 @@ import { UserRole } from '../types';
 import {
   Scissors,
   User,
+  Store,
   ShieldCheck,
-  CheckCircle2,
-  Lock,
   ArrowRight,
-  Sparkles,
+  Lock,
+  Mail,
+  Phone,
+  Building,
+  MapPin,
+  Check,
 } from 'lucide-react';
 
 export const AuthPages: React.FC = () => {
-  const { currentView, setCurrentView, setRole, addToast } = useApp();
+  const {
+    currentView,
+    setCurrentView,
+    loginWithCredentials,
+    registerUser,
+  } = useApp();
 
   const isRegister = currentView === 'customer-register' || currentView === 'tailor-register';
-  const defaultRole: UserRole = currentView.includes('tailor') ? 'tailor' : 'customer';
 
-  const [selectedRole, setSelectedRole] = useState<UserRole>(defaultRole);
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [email, setEmail] = useState('');
-  const [shopName, setShopName] = useState('');
-  const [city, setCity] = useState('Pudukkottai');
+  // Login form state
+  const [loginIdentifier, setLoginIdentifier] = useState('priya.sharma@example.com');
+  const [loginPassword, setLoginPassword] = useState('password123');
+  const [loginError, setLoginError] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Register form state
+  const [registerRole, setRegisterRole] = useState<'customer' | 'tailor'>('customer');
+  const [regName, setRegName] = useState('');
+  const [regEmail, setRegEmail] = useState('');
+  const [regPhone, setRegPhone] = useState('');
+  const [regPassword, setRegPassword] = useState('');
+  const [regCity, setRegCity] = useState('Pudukkottai');
+  const [regShopName, setRegShopName] = useState('');
+
+  const handleLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setRole(selectedRole);
+    setLoginError('');
 
-    if (selectedRole === 'tailor') {
-      addToast(
-        'success',
-        isRegister ? 'Shop Registered!' : 'Welcome Master Tailor!',
-        'Your workshop portal is now active.'
-      );
-      setCurrentView('tailor-dashboard');
-    } else {
-      addToast(
-        'success',
-        isRegister ? 'Account Created!' : 'Welcome Back!',
-        'Find tailors or track your ongoing garments.'
-      );
-      setCurrentView('customer-dashboard');
+    const result = loginWithCredentials(loginIdentifier, loginPassword);
+    if (!result.success) {
+      setLoginError(result.message || 'Invalid credentials. Please check your details.');
     }
   };
 
-  const handleQuickDemo = (role: UserRole) => {
-    setRole(role);
-    if (role === 'admin') {
-      addToast('info', 'Admin Access Granted', 'Switched to SuperAdmin overview.');
-      setCurrentView('admin-dashboard');
-    } else if (role === 'tailor') {
-      addToast('success', 'Tailor Login', 'Signed in as Lakshmi Stitching Studio.');
-      setCurrentView('tailor-dashboard');
-    } else {
-      addToast('success', 'Customer Login', 'Signed in as Ananya Sharma.');
-      setCurrentView('customer-dashboard');
-    }
+  const handleRegisterSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    registerUser({
+      role: registerRole,
+      name: regName,
+      email: regEmail,
+      password: regPassword || 'password123',
+      phone: regPhone,
+      city: regCity,
+      shopName: registerRole === 'tailor' ? regShopName : undefined,
+    });
+  };
+
+  const fillAndLoginDemo = (email: string) => {
+    setLoginIdentifier(email);
+    setLoginPassword('password123');
+    loginWithCredentials(email, 'password123');
   };
 
   return (
-    <div className="max-w-md mx-auto px-4 py-12">
-      <div className="bg-white rounded-3xl border border-stone-200 p-6 sm:p-8 shadow-sm space-y-6">
+    <div className="max-w-lg mx-auto px-4 py-16 sm:py-24">
+      <div className="bg-white rounded-3xl border border-stone-200 p-8 sm:p-10 shadow-sm space-y-6">
         {/* Header */}
-        <div className="text-center space-y-1">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-amber-50 text-amber-800 mb-2">
+        <div className="text-center space-y-2">
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-amber-50 text-amber-800 ring-1 ring-amber-200/50 mb-1">
             <Scissors className="w-6 h-6" />
           </div>
-          <h1 className="font-serif text-2xl font-bold text-stone-900">
-            {isRegister ? 'Create Your Account' : 'Welcome to Local Tailor Connect'}
+          <h1 className="font-serif text-2xl sm:text-3xl font-bold text-stone-900">
+            {isRegister ? 'Create Your Account' : 'Sign In to Your Account'}
           </h1>
-          <p className="text-xs text-stone-500">
+          <p className="text-xs sm:text-sm text-stone-500 max-w-sm mx-auto">
             {isRegister
-              ? 'Join thousands getting perfect bespoke fits'
-              : 'Sign in to access your measurements and orders'}
+              ? 'Select your role to get started with custom bespoke tailoring'
+              : 'Enter your credentials to be redirected to your active dashboard'}
           </p>
         </div>
 
-        {/* Quick Demo Switcher Card */}
-        <div className="p-3 bg-stone-50 rounded-2xl border border-stone-100 space-y-2">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400 block text-center">
-            One-Click Instant Demo Login:
-          </span>
-          <div className="grid grid-cols-3 gap-1.5 text-[11px] font-semibold">
-            <button
-              onClick={() => handleQuickDemo('customer')}
-              className="py-1.5 px-2 bg-white hover:bg-stone-100 border border-stone-200 rounded-lg text-stone-800 text-center shadow-2xs"
-            >
-              Customer
-            </button>
-            <button
-              onClick={() => handleQuickDemo('tailor')}
-              className="py-1.5 px-2 bg-white hover:bg-stone-100 border border-stone-200 rounded-lg text-amber-900 text-center shadow-2xs font-bold"
-            >
-              Master Tailor
-            </button>
-            <button
-              onClick={() => handleQuickDemo('admin')}
-              className="py-1.5 px-2 bg-white hover:bg-stone-100 border border-stone-200 rounded-lg text-blue-900 text-center shadow-2xs font-bold"
-            >
-              Admin
-            </button>
-          </div>
-        </div>
-
-        {/* Role Toggle */}
-        <div className="grid grid-cols-2 p-1 bg-stone-100 rounded-xl text-xs font-semibold">
-          <button
-            type="button"
-            onClick={() => setSelectedRole('customer')}
-            className={`py-2 rounded-lg transition-all ${
-              selectedRole === 'customer'
-                ? 'bg-white text-stone-900 shadow-xs'
-                : 'text-stone-600 hover:text-stone-900'
-            }`}
-          >
-            I am a Customer
-          </button>
-          <button
-            type="button"
-            onClick={() => setSelectedRole('tailor')}
-            className={`py-2 rounded-lg transition-all ${
-              selectedRole === 'tailor'
-                ? 'bg-white text-stone-900 shadow-xs'
-                : 'text-stone-600 hover:text-stone-900'
-            }`}
-          >
-            I am a Tailor
-          </button>
-        </div>
-
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {isRegister && (
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-stone-700">Full Name</label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. Ananya Sharma or Lakshmi R."
-                className="w-full text-xs p-2.5 border border-stone-300 rounded-xl focus:outline-none focus:border-amber-800"
-                required
-              />
-            </div>
-          )}
-
-          {selectedRole === 'tailor' && isRegister && (
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-stone-700">Boutique / Shop Name</label>
-              <input
-                type="text"
-                value={shopName}
-                onChange={(e) => setShopName(e.target.value)}
-                placeholder="e.g. Lakshmi Stitching Studio"
-                className="w-full text-xs p-2.5 border border-stone-300 rounded-xl focus:outline-none focus:border-amber-800"
-                required
-              />
-            </div>
-          )}
-
-          <div className="space-y-1">
-            <label className="text-xs font-semibold text-stone-700">Mobile Number</label>
-            <div className="flex">
-              <span className="inline-flex items-center px-3 border border-r-0 border-stone-300 rounded-l-xl bg-stone-50 text-stone-500 text-xs font-medium">
-                +91
+        {/* ================= LOGIN VIEW ================= */}
+        {!isRegister && (
+          <>
+            {/* Quick Demo Credentials Box */}
+            <div className="p-4 bg-stone-50 rounded-2xl border border-stone-200/80 space-y-2.5">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-stone-500 block text-center">
+                Instant 1-Click Role Login (Testing Accounts)
               </span>
-              <input
-                type="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="98421 90812"
-                className="w-full text-xs p-2.5 border border-stone-300 rounded-r-xl focus:outline-none focus:border-amber-800"
-                required
-              />
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => fillAndLoginDemo('priya.sharma@example.com')}
+                  className="p-2.5 bg-white hover:bg-amber-50 hover:border-amber-300 border border-stone-200 rounded-xl text-left transition-all group"
+                >
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-stone-900 group-hover:text-amber-900">
+                    <User className="w-3.5 h-3.5 text-amber-700" />
+                    <span>Customer</span>
+                  </div>
+                  <p className="text-[10px] text-stone-500 mt-0.5">Priya Sharma</p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => fillAndLoginDemo('lakshmi.studio@example.com')}
+                  className="p-2.5 bg-white hover:bg-emerald-50 hover:border-emerald-300 border border-stone-200 rounded-xl text-left transition-all group"
+                >
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-stone-900 group-hover:text-emerald-900">
+                    <Store className="w-3.5 h-3.5 text-emerald-700" />
+                    <span>Tailor</span>
+                  </div>
+                  <p className="text-[10px] text-stone-500 mt-0.5">Lakshmi Studio</p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => fillAndLoginDemo('rajesh.admin@localtailorconnect.in')}
+                  className="p-2.5 bg-white hover:bg-indigo-50 hover:border-indigo-300 border border-stone-200 rounded-xl text-left transition-all group"
+                >
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-stone-900 group-hover:text-indigo-900">
+                    <ShieldCheck className="w-3.5 h-3.5 text-indigo-700" />
+                    <span>Admin</span>
+                  </div>
+                  <p className="text-[10px] text-stone-500 mt-0.5">Rajesh Kumar</p>
+                </button>
+              </div>
             </div>
-          </div>
 
-          <div className="space-y-1">
-            <label className="text-xs font-semibold text-stone-700">Password / OTP</label>
-            <input
-              type="password"
-              placeholder="••••••••"
-              defaultValue="password123"
-              className="w-full text-xs p-2.5 border border-stone-300 rounded-xl focus:outline-none focus:border-amber-800"
-              required
-            />
-          </div>
+            {/* Error banner */}
+            {loginError && (
+              <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl">
+                {loginError}
+              </div>
+            )}
 
-          <button
-            type="submit"
-            className="w-full py-3 bg-amber-800 hover:bg-amber-900 text-white font-bold text-xs rounded-xl shadow-xs transition-all active:scale-95 flex items-center justify-center gap-1.5"
-          >
-            <span>
-              {isRegister
-                ? selectedRole === 'tailor'
-                  ? 'Register Tailor Workshop'
-                  : 'Create Customer Account'
-                : 'Sign In'}
-            </span>
-            <ArrowRight className="w-4 h-4" />
-          </button>
-        </form>
+            {/* Login Form */}
+            <form onSubmit={handleLoginSubmit} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-stone-700">Email or Mobile Number</label>
+                <div className="relative">
+                  <Mail className="w-4 h-4 text-stone-400 absolute left-3 top-3" />
+                  <input
+                    type="text"
+                    value={loginIdentifier}
+                    onChange={(e) => setLoginIdentifier(e.target.value)}
+                    placeholder="Enter email or phone..."
+                    className="w-full text-xs pl-9 pr-3 py-2.5 border border-stone-300 rounded-xl focus:outline-none focus:border-amber-800"
+                    required
+                  />
+                </div>
+              </div>
 
-        {/* Toggle Sign In / Register */}
-        <div className="text-center text-xs text-stone-500 pt-2 border-t border-stone-100">
-          {isRegister ? (
-            <p>
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-stone-700">Password</label>
+                <div className="relative">
+                  <Lock className="w-4 h-4 text-stone-400 absolute left-3 top-3" />
+                  <input
+                    type="password"
+                    value={loginPassword}
+                    onChange={(e) => setLoginPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full text-xs pl-9 pr-3 py-2.5 border border-stone-300 rounded-xl focus:outline-none focus:border-amber-800"
+                    required
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                className="w-full py-3 bg-amber-800 hover:bg-amber-900 text-white font-bold text-xs sm:text-sm rounded-xl shadow-xs transition-all flex items-center justify-center gap-2 active:scale-95"
+              >
+                <span>Sign In</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </form>
+
+            <div className="text-center text-xs text-stone-500 pt-2 border-t border-stone-100">
+              Don't have an account?{' '}
+              <button
+                type="button"
+                onClick={() => setCurrentView('customer-register')}
+                className="font-bold text-amber-800 hover:underline"
+              >
+                Create an account
+              </button>
+            </div>
+          </>
+        )}
+
+        {/* ================= REGISTER VIEW ================= */}
+        {isRegister && (
+          <form onSubmit={handleRegisterSubmit} className="space-y-5">
+            {/* Step 1: Select Role */}
+            <div className="space-y-2">
+              <label className="text-xs font-bold uppercase tracking-wider text-stone-500 block">
+                1. Select Account Type:
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setRegisterRole('customer')}
+                  className={`p-3.5 rounded-2xl border text-left transition-all ${
+                    registerRole === 'customer'
+                      ? 'border-amber-800 bg-amber-50/70 ring-1 ring-amber-800'
+                      : 'border-stone-200 bg-white hover:bg-stone-50'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1.5">
+                    <User className={`w-5 h-5 ${registerRole === 'customer' ? 'text-amber-800' : 'text-stone-500'}`} />
+                    {registerRole === 'customer' && <Check className="w-4 h-4 text-amber-800" />}
+                  </div>
+                  <p className="text-xs font-bold text-stone-900">Customer</p>
+                  <p className="text-[11px] text-stone-500 mt-0.5">Order custom stitching & alterations</p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setRegisterRole('tailor')}
+                  className={`p-3.5 rounded-2xl border text-left transition-all ${
+                    registerRole === 'tailor'
+                      ? 'border-emerald-800 bg-emerald-50/70 ring-1 ring-emerald-800'
+                      : 'border-stone-200 bg-white hover:bg-stone-50'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1.5">
+                    <Store className={`w-5 h-5 ${registerRole === 'tailor' ? 'text-emerald-800' : 'text-stone-500'}`} />
+                    {registerRole === 'tailor' && <Check className="w-4 h-4 text-emerald-800" />}
+                  </div>
+                  <p className="text-xs font-bold text-stone-900">Master Tailor</p>
+                  <p className="text-[11px] text-stone-500 mt-0.5">Manage workshop, orders & quotes</p>
+                </button>
+              </div>
+            </div>
+
+            {/* Step 2: Details */}
+            <div className="space-y-3.5 pt-1">
+              <label className="text-xs font-bold uppercase tracking-wider text-stone-500 block">
+                2. Enter Your Information:
+              </label>
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-stone-700">Full Name</label>
+                <input
+                  type="text"
+                  value={regName}
+                  onChange={(e) => setRegName(e.target.value)}
+                  placeholder="e.g. Kavitha Raman"
+                  className="w-full text-xs p-2.5 border border-stone-300 rounded-xl focus:outline-none focus:border-amber-800"
+                  required
+                />
+              </div>
+
+              {registerRole === 'tailor' && (
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-stone-700">Workshop / Boutique Name</label>
+                  <div className="relative">
+                    <Building className="w-4 h-4 text-stone-400 absolute left-3 top-3" />
+                    <input
+                      type="text"
+                      value={regShopName}
+                      onChange={(e) => setRegShopName(e.target.value)}
+                      placeholder="e.g. Raman Bespoke Studio"
+                      className="w-full text-xs pl-9 pr-3 py-2.5 border border-stone-300 rounded-xl focus:outline-none focus:border-emerald-800"
+                      required
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-stone-700">Email Address</label>
+                  <input
+                    type="email"
+                    value={regEmail}
+                    onChange={(e) => setRegEmail(e.target.value)}
+                    placeholder="name@example.com"
+                    className="w-full text-xs p-2.5 border border-stone-300 rounded-xl focus:outline-none focus:border-amber-800"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-stone-700">Mobile Number</label>
+                  <input
+                    type="tel"
+                    value={regPhone}
+                    onChange={(e) => setRegPhone(e.target.value)}
+                    placeholder="+91 98401 00000"
+                    className="w-full text-xs p-2.5 border border-stone-300 rounded-xl focus:outline-none focus:border-amber-800"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-stone-700">City / Town</label>
+                  <input
+                    type="text"
+                    value={regCity}
+                    onChange={(e) => setRegCity(e.target.value)}
+                    placeholder="Pudukkottai"
+                    className="w-full text-xs p-2.5 border border-stone-300 rounded-xl focus:outline-none focus:border-amber-800"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-stone-700">Password</label>
+                  <input
+                    type="password"
+                    value={regPassword}
+                    onChange={(e) => setRegPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full text-xs p-2.5 border border-stone-300 rounded-xl focus:outline-none focus:border-amber-800"
+                    required
+                  />
+                </div>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              className="w-full py-3 bg-amber-800 hover:bg-amber-900 text-white font-bold text-xs sm:text-sm rounded-xl shadow-xs transition-all flex items-center justify-center gap-2 active:scale-95"
+            >
+              <span>
+                {registerRole === 'tailor' ? 'Complete Tailor Registration' : 'Complete Customer Sign Up'}
+              </span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+
+            <div className="text-center text-xs text-stone-500 pt-2 border-t border-stone-100">
               Already have an account?{' '}
               <button
+                type="button"
                 onClick={() => setCurrentView('customer-login')}
                 className="font-bold text-amber-800 hover:underline"
               >
                 Sign In
               </button>
-            </p>
-          ) : (
-            <p>
-              New to Local Tailor Connect?{' '}
-              <button
-                onClick={() => setCurrentView('customer-register')}
-                className="font-bold text-amber-800 hover:underline"
-              >
-                Create Account
-              </button>
-            </p>
-          )}
-        </div>
+            </div>
+          </form>
+        )}
       </div>
     </div>
   );
