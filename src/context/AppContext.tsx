@@ -12,18 +12,8 @@ import {
   OrderStatus,
   AuthUser,
 } from '../types';
-import {
-  INITIAL_CUSTOMER,
-  INITIAL_MEASUREMENT_PROFILES,
-  INITIAL_TAILORS,
-  INITIAL_ORDERS,
-  INITIAL_APPOINTMENTS,
-  INITIAL_CHATS,
-  INITIAL_NOTIFICATIONS,
-  DEFAULT_AUTH_USERS,
-  INITIAL_REGISTERED_USERS,
-} from '../data/mockData';
-import { generateTailorAIResponse } from '../services/aiTailorService';
+import { api, jsonBody } from '../lib/api';
+import { authClient } from '../lib/auth-client';
 
 export type AppView =
   | 'home'
@@ -33,6 +23,7 @@ export type AppView =
   | 'customer-dashboard'
   | 'tailor-dashboard'
   | 'admin-dashboard'
+  | 'profile-settings'
   | 'track-order'
   | 'customer-login'
   | 'customer-register'
@@ -53,7 +44,7 @@ interface AppContextType {
   currentUser: AuthUser | null;
   isAuthenticated: boolean;
   registeredUsers: AuthUser[];
-  loginWithCredentials: (emailOrPhone: string, password?: string) => { success: boolean; role?: UserRole; message?: string };
+  loginWithCredentials: (email: string, password: string) => Promise<{ success: boolean; role?: UserRole; message?: string }>;
   registerUser: (userData: {
     role: 'customer' | 'tailor';
     name: string;
@@ -62,8 +53,14 @@ interface AppContextType {
     phone: string;
     city: string;
     shopName?: string;
-  }) => { success: boolean; role: UserRole };
-  logout: () => void;
+  }) => Promise<{ success: boolean; role: UserRole; message?: string }>;
+  updateProfile: (details: {
+    name: string;
+    phone: string;
+    city: string;
+    shopName?: string;
+  }) => Promise<{ success: boolean; message?: string }>;
+  logout: () => Promise<void>;
   navigateToDashboard: () => void;
   currentView: AppView;
   setCurrentView: (view: AppView) => void;
@@ -94,7 +91,7 @@ interface AppContextType {
   addMeasurementProfile: (profile: Omit<MeasurementProfile, 'id' | 'customerId' | 'updatedAt'>) => void;
   updateMeasurementProfile: (id: string, updates: Partial<MeasurementProfile>) => void;
   deleteMeasurementProfile: (id: string) => void;
-  createOrderRequest: (orderData: Partial<Order>) => string;
+  createOrderRequest: (orderData: Partial<Order>) => Promise<string>;
   updateOrderStatus: (orderId: string, newStatus: OrderStatus, note?: string) => void;
   sendQuotation: (quotationOrOrderId: any, possibleQuoteData?: any) => void;
   respondToQuotation: (orderId: string, accept: boolean) => void;
@@ -121,7 +118,7 @@ interface AppContextType {
   toggleSavedTailor: (tailorId: string) => void;
   verifyTailor: (tailorId: string, isVerified: boolean) => void;
   markNotificationAsRead: (id: string) => void;
-  reorderPreviousOrder: (prevOrder: Order) => string;
+  reorderPreviousOrder: (prevOrder: Order) => Promise<string>;
 
   // Modal controls
   isCustomRequestOpen: boolean;
@@ -136,86 +133,70 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
+const EMPTY_CUSTOMER: CustomerUser = {
+  id: '',
+  name: '',
+  email: '',
+  phone: '',
+  city: '',
+  avatar: '',
+  savedTailorIds: [],
+};
+
+const EMPTY_TAILOR: Tailor = {
+  id: '',
+  name: '',
+  shopName: 'Your workshop',
+  tagline: '',
+  avatar: '',
+  coverImage: '',
+  rating: 0,
+  reviewCount: 0,
+  distanceKm: 0,
+  experienceYears: 0,
+  address: '',
+  city: '',
+  pincode: '',
+  startingPrice: 0,
+  availableToday: false,
+  homePickup: false,
+  deliveryAvailable: false,
+  phone: '',
+  email: '',
+  workingHours: '',
+  isVerified: false,
+  specializations: [],
+  services: [],
+  about: '',
+  portfolio: [],
+  reviews: [],
+  coordinates: { lat: 0, lng: 0 },
+};
+
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Safe LocalStorage loaders
-  const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => {
-    const saved = localStorage.getItem('ltc_current_user') || localStorage.getItem('ltc_auth_user');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (parsed && parsed.id) return parsed;
-      } catch (e) {
-        // fallback
-      }
-    }
-    return DEFAULT_AUTH_USERS.customer;
-  });
-
-  const [registeredUsers, setRegisteredUsers] = useState<AuthUser[]>(() => {
-    const saved = localStorage.getItem('ltc_registered_users');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      } catch (e) {
-        // fallback
-      }
-    }
-    return INITIAL_REGISTERED_USERS;
-  });
-
-  const [role, setRoleState] = useState<UserRole>(() => {
-    if (currentUser) return currentUser.role;
-    return (localStorage.getItem('ltc_role') as UserRole) || 'customer';
-  });
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
+  const registeredUsers: AuthUser[] = [];
+  const [role, setRoleState] = useState<UserRole>('guest');
 
   const isAuthenticated = currentUser !== null && currentUser.role !== 'guest';
 
-  const [currentView, setCurrentViewState] = useState<AppView>(() => {
-    return (localStorage.getItem('ltc_view') as AppView) || 'home';
-  });
-
-  const [customer, setCustomer] = useState<CustomerUser>(() => {
-    const saved = localStorage.getItem('ltc_customer');
-    return saved ? JSON.parse(saved) : INITIAL_CUSTOMER;
-  });
-
-  const [tailors, setTailors] = useState<Tailor[]>(() => {
-    const saved = localStorage.getItem('ltc_tailors');
-    return saved ? JSON.parse(saved) : INITIAL_TAILORS;
-  });
-
-  const [orders, setOrders] = useState<Order[]>(() => {
-    const saved = localStorage.getItem('ltc_orders');
-    return saved ? JSON.parse(saved) : INITIAL_ORDERS;
-  });
-
-  const [measurementProfiles, setMeasurementProfiles] = useState<MeasurementProfile[]>(() => {
-    const saved = localStorage.getItem('ltc_measurements');
-    return saved ? JSON.parse(saved) : INITIAL_MEASUREMENT_PROFILES;
-  });
-
-  const [appointments, setAppointments] = useState<Appointment[]>(() => {
-    const saved = localStorage.getItem('ltc_appointments');
-    return saved ? JSON.parse(saved) : INITIAL_APPOINTMENTS;
-  });
-
-  const [messages, setMessages] = useState<ChatMessage[]>(() => {
-    const saved = localStorage.getItem('ltc_messages');
-    return saved ? JSON.parse(saved) : INITIAL_CHATS;
-  });
-
-  const [notifications, setNotifications] = useState<AppNotification[]>(() => {
-    const saved = localStorage.getItem('ltc_notifications');
-    return saved ? JSON.parse(saved) : INITIAL_NOTIFICATIONS;
-  });
-
-  const [selectedTailorId, setSelectedTailorId] = useState<string>('tailor_01');
-  const [selectedOrderId, setSelectedOrderId] = useState<string>('LTC-10482');
+  const [currentView, setCurrentViewState] = useState<AppView>('home');
+  const [customer, setCustomer] = useState<CustomerUser>(EMPTY_CUSTOMER);
+  const [tailors, setTailors] = useState<Tailor[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [measurementProfiles, setMeasurementProfiles] = useState<MeasurementProfile[]>([]);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [selectedTailorId, setSelectedTailorId] = useState<string>('');
+  const [selectedOrderId, setSelectedOrderId] = useState<string>('');
+  const [ownTailorId, setOwnTailorId] = useState<string>('');
   const [selectedCity, setSelectedCity] = useState<string>('Pudukkottai');
   const [pincode, setPincode] = useState<string>('622001');
 
-  const tailorProfile = tailors.find((t) => t.id === selectedTailorId) || tailors[0];
+  const tailorProfile =
+    tailors.find((t) => t.id === (role === 'tailor' ? ownTailorId : selectedTailorId)) ||
+    EMPTY_TAILOR;
   const setTailorProfile = (t: Tailor) => {
     setSelectedTailorId(t.id);
   };
@@ -241,110 +222,52 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setToasts((prev) => prev.filter((t) => t.id !== id));
   };
 
-  // Sync to local storage
-  useEffect(() => {
-    localStorage.setItem('ltc_role', role);
-  }, [role]);
-
-  useEffect(() => {
-    localStorage.setItem('ltc_view', currentView);
-  }, [currentView]);
-
-  useEffect(() => {
-    localStorage.setItem('ltc_orders', JSON.stringify(orders));
-  }, [orders]);
-
-  useEffect(() => {
-    localStorage.setItem('ltc_tailors', JSON.stringify(tailors));
-  }, [tailors]);
-
-  useEffect(() => {
-    localStorage.setItem('ltc_measurements', JSON.stringify(measurementProfiles));
-  }, [measurementProfiles]);
-
-  useEffect(() => {
-    localStorage.setItem('ltc_appointments', JSON.stringify(appointments));
-  }, [appointments]);
-
-  useEffect(() => {
-    localStorage.setItem('ltc_messages', JSON.stringify(messages));
-  }, [messages]);
-
-  useEffect(() => {
-    localStorage.setItem('ltc_notifications', JSON.stringify(notifications));
-  }, [notifications]);
-
-  useEffect(() => {
-    localStorage.setItem('ltc_customer', JSON.stringify(customer));
-  }, [customer]);
-
-  useEffect(() => {
-    if (currentUser) {
-      localStorage.setItem('ltc_current_user', JSON.stringify(currentUser));
-      localStorage.setItem('ltc_auth_user', JSON.stringify(currentUser));
-      setRoleState(currentUser.role);
-      if (currentUser.role === 'customer') {
-        setCustomer((prev) => ({
-          ...prev,
-          id: currentUser.id,
-          name: currentUser.name,
-          email: currentUser.email,
-          phone: currentUser.phone || prev.phone,
-          city: currentUser.city || prev.city,
-          avatar: currentUser.avatar || prev.avatar,
-        }));
-      }
-    } else {
-      localStorage.removeItem('ltc_current_user');
-      setRoleState('guest');
-    }
-  }, [currentUser]);
-
-  const loginWithCredentials = (emailOrPhone: string, password?: string) => {
-    const clean = emailOrPhone.trim().toLowerCase();
-    const cleanDigits = clean.replace(/\D/g, '');
-
-    const found = registeredUsers.find((u) => {
-      const matchEmail = u.email.toLowerCase() === clean;
-      const matchPhone = u.phone && u.phone.replace(/\D/g, '') === cleanDigits && cleanDigits.length >= 6;
-      const matchId = u.id.toLowerCase() === clean;
-      const matchName = u.name.toLowerCase() === clean;
-      return matchEmail || matchPhone || matchId || matchName;
-    }) || INITIAL_REGISTERED_USERS.find((u) => {
-      return u.email.toLowerCase() === clean || (u.phone && u.phone.replace(/\D/g, '') === cleanDigits && cleanDigits.length >= 6);
-    });
-
-    if (!found) {
-      return { success: false, message: 'Account not found. Please check your email or phone.' };
-    }
-
-    if (password && password !== 'password123' && found.password && found.password !== password) {
-      return { success: false, message: 'Incorrect password.' };
-    }
-
-    setCurrentUser(found);
-    setRoleState(found.role);
-    localStorage.setItem('ltc_role', found.role);
-
-    // Automatic role-based redirect
-    if (found.role === 'customer') {
-      setCurrentViewState('customer-dashboard');
-      addToast('success', 'Welcome Back!', `Signed in as Customer (${found.name})`);
-    } else if (found.role === 'tailor') {
-      setCurrentViewState('tailor-dashboard');
-      addToast('success', 'Workshop Active', `Signed in as Master Tailor (${found.shopName || found.name})`);
-    } else if (found.role === 'admin') {
-      setCurrentViewState('admin-dashboard');
-      addToast('success', 'Admin Portal', `Signed in as Platform Admin (${found.name})`);
-    } else {
-      setCurrentViewState('home');
-    }
-
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    return { success: true, role: found.role };
+  const loadPublicTailors = async () => {
+    const data = await api<{ tailors: Tailor[] }>('/tailors');
+    setTailors(data.tailors);
+    if (!selectedTailorId && data.tailors[0]) setSelectedTailorId(data.tailors[0].id);
   };
 
-  const registerUser = (userData: {
+  const loadBootstrap = async () => {
+    const data = await api<any>('/bootstrap');
+    setCurrentUser(data.currentUser);
+    setRoleState(data.currentUser.role);
+    if (data.customer) setCustomer(data.customer);
+    setTailors(data.tailors);
+    setOrders(data.orders);
+    setMeasurementProfiles(data.measurementProfiles);
+    setAppointments(data.appointments);
+    setMessages(data.messages);
+    setNotifications(data.notifications);
+    if (data.tailorProfile) setOwnTailorId(data.tailorProfile.id);
+    if (!selectedTailorId && data.tailors[0]) setSelectedTailorId(data.tailors[0].id);
+    return data.currentUser as AuthUser;
+  };
+
+  useEffect(() => {
+    authClient.getSession({ query: {} }).then(({ data }) => {
+      if (data?.user) loadBootstrap().catch(() => logout(false));
+      else loadPublicTailors().catch(console.error);
+    });
+    // Legacy browser data is untrusted and must not survive the secure migration.
+    Object.keys(localStorage).filter((key) => key.startsWith('ltc_')).forEach((key) => localStorage.removeItem(key));
+  }, []);
+
+  const loginWithCredentials = async (email: string, password: string) => {
+    const result = await authClient.signIn.email({ email: email.trim().toLowerCase(), password });
+    if (result.error) return { success: false, message: result.error.message || 'Unable to sign in.' };
+    try {
+      const user = await loadBootstrap();
+      setCurrentViewState(user.role === 'tailor' ? 'tailor-dashboard' : user.role === 'admin' ? 'admin-dashboard' : 'customer-dashboard');
+      addToast('success', 'Welcome Back!', `Signed in as ${user.name}`);
+      return { success: true, role: user.role };
+    } catch {
+      await authClient.signOut({});
+      return { success: false, message: 'Account profile is not provisioned.' };
+    }
+  };
+
+  const registerUser = async (userData: {
     role: 'customer' | 'tailor';
     name: string;
     email: string;
@@ -353,63 +276,65 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     city: string;
     shopName?: string;
   }) => {
-    const newId = (userData.role === 'tailor' ? 'tailor_' : 'cust_') + Date.now();
-    const newUser: AuthUser = {
-      id: newId,
-      name: userData.name,
-      email: userData.email,
-      role: userData.role,
-      phone: userData.phone,
-      city: userData.city || 'Pudukkottai',
-      shopName: userData.shopName,
+    const result = await authClient.signUp.email({
+      name: userData.name.trim(),
+      email: userData.email.trim().toLowerCase(),
       password: userData.password,
-      avatar:
-        userData.role === 'tailor'
-          ? 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80'
-          : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-    };
-
-    const updated = [newUser, ...registeredUsers];
-    setRegisteredUsers(updated);
-    localStorage.setItem('ltc_registered_users', JSON.stringify(updated));
-
-    setCurrentUser(newUser);
-    setRoleState(newUser.role);
-    localStorage.setItem('ltc_role', newUser.role);
-
-    // Automatic role-based redirect upon registration
-    if (userData.role === 'customer') {
-      setCurrentViewState('customer-dashboard');
-      addToast('success', 'Account Created!', `Welcome, ${newUser.name}! Your customer dashboard is ready.`);
-    } else {
-      setCurrentViewState('tailor-dashboard');
-      addToast('success', 'Workshop Registered!', `Welcome Master Tailor, ${newUser.shopName || newUser.name}!`);
+      accountType: userData.role,
+      phone: userData.phone.trim(),
+      city: userData.city.trim(),
+      shopName: userData.role === 'tailor' ? userData.shopName?.trim() : undefined,
+    } as any);
+    if (result.error) {
+      return { success: false, role: userData.role, message: result.error.message || 'Unable to create account.' };
     }
-
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    const user = await loadBootstrap();
+    setCurrentViewState(user.role === 'tailor' ? 'tailor-dashboard' : 'customer-dashboard');
+    addToast('success', 'Account Created!', `Welcome, ${userData.shopName || userData.name}!`);
     return { success: true, role: userData.role };
   };
 
-  const logout = () => {
+  const logout = async (showToast = true) => {
+    await authClient.signOut({}).catch(() => undefined);
     setCurrentUser(null);
     setRoleState('guest');
-    localStorage.removeItem('ltc_current_user');
-    localStorage.setItem('ltc_role', 'guest');
+    setOrders([]);
+    setMeasurementProfiles([]);
+    setAppointments([]);
+    setMessages([]);
+    setNotifications([]);
+    setOwnTailorId('');
     setCurrentViewState('home');
-    addToast('info', 'Signed Out', 'You have been safely signed out.');
+    await loadPublicTailors().catch(console.error);
+    if (showToast) addToast('info', 'Signed Out', 'You have been safely signed out.');
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const updateProfile = async (details: {
+    name: string;
+    phone: string;
+    city: string;
+    shopName?: string;
+  }) => {
+    try {
+      await api('/profile', { method: 'PATCH', body: jsonBody(details) });
+      await loadBootstrap();
+      addToast('success', 'Profile Updated', 'Your account details were saved.');
+      return { success: true };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to update profile.';
+      addToast('warning', 'Update Failed', message);
+      return { success: false, message };
+    }
   };
 
   const setRole = (newRole: UserRole) => {
     if (newRole === 'guest') {
-      logout();
+      void logout();
+    } else if (currentUser?.role === newRole) {
+      navigateToDashboard();
     } else {
-      const user = registeredUsers.find((u) => u.role === newRole) || DEFAULT_AUTH_USERS[newRole];
-      setCurrentUser(user);
-      setRoleState(newRole);
-      if (newRole === 'customer') setCurrentViewState('customer-dashboard');
-      else if (newRole === 'tailor') setCurrentViewState('tailor-dashboard');
-      else if (newRole === 'admin') setCurrentViewState('admin-dashboard');
+      setCurrentViewState(newRole === 'tailor' ? 'tailor-login' : 'customer-login');
     }
   };
 
@@ -434,236 +359,81 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Measurement Profile Actions
   const addMeasurementProfile = (profile: Omit<MeasurementProfile, 'id' | 'customerId' | 'updatedAt'>) => {
-    const newProfile: MeasurementProfile = {
-      ...profile,
-      id: 'mp_' + Date.now(),
-      customerId: customer.id,
-      updatedAt: 'Just now',
-    };
-    setMeasurementProfiles((prev) => [newProfile, ...prev]);
-    addToast('success', 'Profile Created', `"${newProfile.profileName}" saved to your measurements.`);
+    void api('/measurements', { method: 'POST', body: jsonBody(profile) })
+      .then(loadBootstrap)
+      .then(() => addToast('success', 'Profile Created', `"${profile.profileName}" saved to your measurements.`))
+      .catch((error) => addToast('warning', 'Unable to save', error.message));
   };
 
   const updateMeasurementProfile = (id: string, updates: Partial<MeasurementProfile>) => {
-    setMeasurementProfiles((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, ...updates, updatedAt: 'Just now' } : p))
-    );
-    addToast('success', 'Measurements Updated', 'Your digital measurements were successfully updated.');
+    void api(`/measurements/${id}`, { method: 'PATCH', body: jsonBody(updates) })
+      .then(loadBootstrap)
+      .then(() => addToast('success', 'Measurements Updated', 'Your digital measurements were successfully updated.'))
+      .catch((error) => addToast('warning', 'Unable to update', error.message));
   };
 
   const deleteMeasurementProfile = (id: string) => {
-    setMeasurementProfiles((prev) => prev.filter((p) => p.id !== id));
-    addToast('info', 'Profile Deleted', 'The measurement profile was removed.');
+    void api(`/measurements/${id}`, { method: 'DELETE' })
+      .then(loadBootstrap)
+      .then(() => addToast('info', 'Profile Deleted', 'The measurement profile was removed.'))
+      .catch((error) => addToast('warning', 'Unable to delete', error.message));
   };
 
   // Order Actions
-  const createOrderRequest = (orderData: Partial<Order>): string => {
-    const newOrderId = 'LTC-' + (10500 + Math.floor(Math.random() * 900));
-    const targetTailor = tailors.find((t) => t.id === orderData.tailorId) || tailors[0];
-
-    const newOrder: Order = {
-      id: newOrderId,
-      customerId: customer.id,
-      customerName: customer.name,
-      customerPhone: customer.phone,
-      tailorId: targetTailor.id,
-      tailorName: targetTailor.name,
-      tailorShop: targetTailor.shopName,
-      tailorPhone: targetTailor.phone,
-      serviceType: orderData.serviceType || 'New Clothing',
-      garmentType: orderData.garmentType || 'Blouse',
-      requirements: orderData.requirements || 'Standard tailored fit',
-      referenceImages: orderData.referenceImages || [],
-      measurementProfileName: orderData.measurementProfileName || 'My Standard Measurements',
-      measurements: orderData.measurements || {},
-      deliveryOption: orderData.deliveryOption || 'Home delivery',
-      deliveryAddress: orderData.deliveryAddress || 'West Main Street, Pudukkottai',
-      status: 'Request Received',
-      estimatedCompletion: orderData.estimatedCompletion || '18 September 2026',
-      createdAt: 'Today, ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      totalAmount: orderData.totalAmount || targetTailor.startingPrice,
-      paymentStatus: 'Pending',
-      timeline: [
-        {
-          status: 'Request Received',
-          timestamp: 'Today, ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          completed: true,
-          note: 'Customer submitted custom service request.',
-        },
-      ],
-    };
-
-    setOrders((prev) => [newOrder, ...prev]);
-
-    // Send push notification to customer & tailor
-    const newNotification: AppNotification = {
-      id: 'notif_' + Date.now(),
-      userId: customer.id,
-      title: 'Order Request Sent',
-      message: `Your request #${newOrderId} was submitted to ${targetTailor.shopName}.`,
-      timestamp: 'Just now',
-      isRead: false,
-      type: 'order',
-      orderId: newOrderId,
-    };
-    setNotifications((prev) => [newNotification, ...prev]);
-
-    addToast('success', 'Request Submitted', `Order #${newOrderId} sent to ${targetTailor.shopName}!`);
-    return newOrderId;
+  const createOrderRequest = async (orderData: Partial<Order>): Promise<string> => {
+    const targetTailor = tailors.find((t) => t.id === orderData.tailorId);
+    if (!targetTailor) throw new Error('Please select a valid tailor');
+    const result = await api<{ order: Order }>('/orders', {
+      method: 'POST',
+      body: jsonBody({
+        tailorId: targetTailor.id,
+        serviceType: orderData.serviceType || 'New Clothing',
+        garmentType: orderData.garmentType || 'Custom garment',
+        requirements: orderData.requirements || '',
+        referenceImages: orderData.referenceImages || [],
+        measurementProfileName: orderData.measurementProfileName || '',
+        measurements: orderData.measurements || {},
+        deliveryOption: orderData.deliveryOption || 'Customer pickup',
+        deliveryAddress: orderData.deliveryAddress,
+        estimatedCompletion: orderData.estimatedCompletion || '',
+      }),
+    });
+    await loadBootstrap();
+    addToast('success', 'Request Submitted', `Your request was sent to ${targetTailor.shopName}.`);
+    return result.order.id;
   };
 
   const updateOrderStatus = (orderId: string, newStatus: OrderStatus, note?: string) => {
-    const timeNow = 'Today, ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-    setOrders((prev) =>
-      prev.map((ord) => {
-        if (ord.id === orderId) {
-          const updatedTimeline = [...ord.timeline];
-          const existingIndex = updatedTimeline.findIndex((t) => t.status === newStatus);
-
-          if (existingIndex >= 0) {
-            updatedTimeline[existingIndex] = {
-              ...updatedTimeline[existingIndex],
-              completed: true,
-              timestamp: timeNow,
-              note: note || updatedTimeline[existingIndex].note,
-            };
-          } else {
-            updatedTimeline.push({
-              status: newStatus,
-              timestamp: timeNow,
-              completed: true,
-              note: note || `Order transitioned to ${newStatus}.`,
-            });
-          }
-
-          return {
-            ...ord,
-            status: newStatus,
-            timeline: updatedTimeline,
-          };
-        }
-        return ord;
-      })
-    );
-
-    // Create realistic customer notification
-    const orderObj = orders.find((o) => o.id === orderId);
-    const newNotif: AppNotification = {
-      id: 'notif_' + Date.now(),
-      userId: customer.id,
-      title: 'Order Update',
-      message: `Order #${orderId} (${orderObj?.garmentType || 'Garment'}) has moved to: ${newStatus}.`,
-      timestamp: 'Just now',
-      isRead: false,
-      type: 'order',
-      orderId,
-    };
-    setNotifications((prev) => [newNotif, ...prev]);
-
-    addToast('info', 'Status Updated', `Order #${orderId} marked as ${newStatus}`);
+    void api(`/orders/${orderId}/status`, { method: 'PATCH', body: jsonBody({ status: newStatus, note }) })
+      .then(loadBootstrap)
+      .then(() => addToast('info', 'Status Updated', `Order marked as ${newStatus}`))
+      .catch((error) => addToast('warning', 'Unable to update', error.message));
   };
 
   const sendQuotation = (quotationOrOrderId: any, possibleQuoteData?: any) => {
-    const quoteId = 'QT-' + (2000 + Math.floor(Math.random() * 900));
-    const nowStr = 'Today, ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-    let quoteData: Quotation;
-    if (typeof quotationOrOrderId === 'string' && possibleQuoteData) {
-      quoteData = {
-        id: quoteId,
-        orderId: quotationOrOrderId,
-        customerName: customer.name,
-        serviceName: possibleQuoteData.serviceName || 'Custom Stitching & Finishing',
-        items: (possibleQuoteData.items || []).map((it: any, idx: number) => ({
-          id: it.id || 'item_' + idx,
-          title: it.title || it.description || 'Stitching Service',
-          amount: it.amount ?? it.price ?? 0,
-        })),
-        totalAmount: possibleQuoteData.totalAmount || 0,
-        status: 'Pending',
-        sentDate: nowStr,
-        notes: possibleQuoteData.validUntil || possibleQuoteData.notes,
-      };
-    } else {
-      quoteData = {
-        ...quotationOrOrderId,
-        id: quoteId,
-        sentDate: nowStr,
-      };
-    }
-
-    setOrders((prev) =>
-      prev.map((ord) => {
-        if (ord.id === quoteData.orderId) {
-          return {
-            ...ord,
-            totalAmount: quoteData.totalAmount || ord.totalAmount,
-            quotation: quoteData,
-            status: ord.status === 'Request Received' ? 'Quote Sent' : ord.status,
-          };
-        }
-        return ord;
-      })
-    );
-
-    // Customer Notification
-    const newNotif: AppNotification = {
-      id: 'notif_' + Date.now(),
-      userId: customer.id,
-      title: 'Quotation Received',
-      message: `${quoteData.serviceName || 'Tailor Quote'}: Quotation #${quoteId} for ₹${quoteData.totalAmount} has been sent.`,
-      timestamp: 'Just now',
-      isRead: false,
-      type: 'quote',
-      orderId: quoteData.orderId,
-    };
-    setNotifications((prev) => [newNotif, ...prev]);
-
-    addToast('success', 'Quotation Sent', `Quotation #${quoteId} for ₹${quoteData.totalAmount} dispatched.`);
+    const orderId = typeof quotationOrOrderId === 'string' ? quotationOrOrderId : quotationOrOrderId.orderId;
+    const quote = possibleQuoteData || quotationOrOrderId;
+    const items = (quote.items || []).map((item: any) => ({
+      title: item.title || item.description || 'Tailoring service',
+      amount: item.amount ?? item.price ?? 0,
+    }));
+    void api(`/orders/${orderId}/quotation`, {
+      method: 'POST',
+      body: jsonBody({ serviceName: quote.serviceName || 'Custom tailoring', notes: quote.notes || quote.validUntil, items }),
+    }).then(loadBootstrap)
+      .then(() => addToast('success', 'Quotation Sent', 'The customer can now review your quotation.'))
+      .catch((error) => addToast('warning', 'Unable to send quotation', error.message));
   };
 
   const respondToQuotation = (orderId: string, accept: boolean) => {
-    setOrders((prev) =>
-      prev.map((ord) => {
-        if (ord.id === orderId && ord.quotation) {
-          return {
-            ...ord,
-            quotation: {
-              ...ord.quotation,
-              status: accept ? 'Accepted' : 'Declined',
-            },
-            status: accept && ord.status === 'Quote Sent' ? 'Measurement Confirmed' : ord.status,
-          };
-        }
-        return ord;
-      })
-    );
-
-    addToast(
-      accept ? 'success' : 'warning',
-      accept ? 'Quote Accepted' : 'Quote Declined',
-      accept
-        ? 'You accepted the quote. Tailor has been notified to proceed with cutting.'
-        : 'Quotation declined. Tailor can send a revised estimate.'
-    );
+    void api(`/orders/${orderId}/quotation`, { method: 'PATCH', body: jsonBody({ accept }) })
+      .then(loadBootstrap)
+      .then(() => addToast(accept ? 'success' : 'warning', accept ? 'Quote Accepted' : 'Quote Declined', 'Your response was saved.'))
+      .catch((error) => addToast('warning', 'Unable to respond', error.message));
   };
 
   const completePayment = (orderId: string, method: string) => {
-    setOrders((prev) =>
-      prev.map((ord) => {
-        if (ord.id === orderId) {
-          return {
-            ...ord,
-            paymentStatus: 'Paid',
-            paymentMethod: method,
-          };
-        }
-        return ord;
-      })
-    );
-
-    addToast('success', 'Payment Successful', `Payment of order #${orderId} completed via ${method}.`);
+    addToast('warning', 'Payment unavailable', `No payment provider is configured; order ${orderId} was not marked paid via ${method}.`);
   };
 
   const markOrderAsPaid = (orderId: string) => {
@@ -671,29 +441,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const bookAppointment = (apt: any) => {
-    const aptType = apt.type || apt.appointmentType || 'Fitting Trial';
-    const targetTailor = tailors.find((t) => t.id === apt.tailorId) || tailorProfile;
-    const newApt: Appointment = {
-      ...apt,
-      id: 'apt_' + Date.now(),
-      type: aptType,
-      address: apt.address || targetTailor.address,
-      status: 'Upcoming',
-    };
-    setAppointments((prev) => [newApt, ...prev]);
-
-    const notif: AppNotification = {
-      id: 'notif_' + Date.now(),
-      userId: customer.id,
-      title: 'Appointment Confirmed',
-      message: `Your ${aptType} appointment on ${apt.date} at ${apt.timeSlot} with ${apt.tailorShop || targetTailor.shopName} is scheduled.`,
-      timestamp: 'Just now',
-      isRead: false,
-      type: 'appointment',
-    };
-    setNotifications((prev) => [notif, ...prev]);
-
-    addToast('success', 'Appointment Booked', `Confirmed for ${apt.date} at ${apt.timeSlot}`);
+    const targetTailor = tailors.find((t) => t.id === apt.tailorId);
+    if (!targetTailor) {
+      addToast('warning', 'Unable to book', 'Please select a valid tailor.');
+      return;
+    }
+    void api('/appointments', {
+      method: 'POST',
+      body: jsonBody({
+        tailorId: targetTailor.id,
+        orderId: apt.orderId,
+        type: apt.type || apt.appointmentType || 'Consultation',
+        date: apt.date,
+        timeSlot: apt.timeSlot,
+        address: apt.address || targetTailor.address,
+        notes: apt.notes,
+      }),
+    }).then(loadBootstrap)
+      .then(() => addToast('success', 'Appointment Booked', `Confirmed for ${apt.date} at ${apt.timeSlot}`))
+      .catch((error) => addToast('warning', 'Unable to book', error.message));
   };
 
   const sendMessage = (
@@ -701,73 +467,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     orderId?: string,
     attachmentUrl?: string
   ) => {
-    let actualText = '';
-    let targetOrderId = orderId || selectedOrderId;
-    let targetAttachment = attachmentUrl;
-    let sRole: 'customer' | 'tailor' = role === 'tailor' ? 'tailor' : 'customer';
-    let sName = role === 'tailor' ? (tailorProfile?.shopName || 'Lakshmi R. (Tailor)') : customer.name;
-    let sId = role === 'tailor' ? tailorProfile.id : customer.id;
-
-    if (typeof textOrPayload === 'object' && textOrPayload !== null) {
-      actualText = textOrPayload.text || '';
-      if (textOrPayload.orderId) targetOrderId = textOrPayload.orderId;
-      if (textOrPayload.attachmentUrl) targetAttachment = textOrPayload.attachmentUrl;
-      if (textOrPayload.senderRole) sRole = textOrPayload.senderRole;
-      if (textOrPayload.senderName) sName = textOrPayload.senderName;
-      if (textOrPayload.senderId) sId = textOrPayload.senderId;
-    } else {
-      actualText = String(textOrPayload || '');
+    const payload = typeof textOrPayload === 'string'
+      ? { text: textOrPayload, orderId, attachmentUrl }
+      : textOrPayload;
+    const targetOrderId = payload.orderId || selectedOrderId;
+    if (!targetOrderId) {
+      addToast('warning', 'Select an order', 'Messages must belong to an order.');
+      return;
     }
-
-    const newMsg: ChatMessage = {
-      id: 'msg_' + Date.now(),
-      orderId: targetOrderId,
-      senderId: sId,
-      senderRole: sRole,
-      senderName: sName,
-      text: actualText,
-      timestamp: 'Today, ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      isRead: true,
-      attachmentUrl: targetAttachment,
-    };
-
-    setMessages((prev) => [...prev, newMsg]);
-
-    // Intelligent AI Tailor reply when customer is messaging
-    if (sRole === 'customer') {
-      const recipientId = typeof textOrPayload === 'object' && textOrPayload.recipientId ? textOrPayload.recipientId : undefined;
-      const targetTailor = tailors.find((t) => t.id === recipientId) || tailorProfile;
-      const targetOrder = orders.find((o) => o.id === targetOrderId);
-
-      setTimeout(async () => {
-        try {
-          const aiResponseText = await generateTailorAIResponse({
-            customerMessage: actualText,
-            tailorName: targetTailor.name,
-            tailorShop: targetTailor.shopName,
-            garmentType: targetOrder?.garmentType,
-            orderId: targetOrderId,
-            orderStatus: targetOrder?.status,
-            requirements: targetOrder?.requirements,
-          });
-
-          const autoReply: ChatMessage = {
-            id: 'msg_reply_' + Date.now(),
-            orderId: targetOrderId,
-            senderId: targetTailor.id,
-            senderRole: 'tailor',
-            senderName: targetTailor.shopName,
-            text: aiResponseText,
-            timestamp: 'Just now',
-            isRead: false,
-          };
-          setMessages((prev) => [...prev, autoReply]);
-          addToast('info', 'New Message', `${targetTailor.shopName} replied to your message.`);
-        } catch (err) {
-          console.error('Error in tailor AI response:', err);
-        }
-      }, 1000);
-    }
+    void api(`/orders/${targetOrderId}/messages`, {
+      method: 'POST',
+      body: jsonBody({ text: payload.text, attachmentUrl: payload.attachmentUrl }),
+    }).then(loadBootstrap)
+      .catch((error) => addToast('warning', 'Unable to send message', error.message));
   };
 
   const submitReview = (
@@ -777,35 +489,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     garmentType: string,
     breakdown: any
   ) => {
-    const newRev = {
-      id: 'rev_' + Date.now(),
-      customerName: customer.name,
-      rating,
-      date: 'Today',
-      comment,
-      garmentType,
-      breakdown,
-    };
-
-    setTailors((prev) =>
-      prev.map((t) => {
-        if (t.id === tailorId) {
-          const newReviews = [newRev, ...t.reviews];
-          const avgRating = (
-            newReviews.reduce((sum, r) => sum + r.rating, 0) / newReviews.length
-          ).toFixed(1);
-          return {
-            ...t,
-            reviews: newReviews,
-            rating: parseFloat(avgRating),
-            reviewCount: t.reviewCount + 1,
-          };
-        }
-        return t;
-      })
-    );
-
-    addToast('success', 'Review Submitted', 'Thank you for rating and reviewing your tailor!');
+    void api('/reviews', {
+      method: 'POST',
+      body: jsonBody({ tailorId, rating, comment, garmentType, breakdown }),
+    }).then(loadBootstrap)
+      .then(() => addToast('success', 'Review Submitted', 'Thank you for reviewing your tailor!'))
+      .catch((error) => addToast('warning', 'Unable to submit review', error.message));
   };
 
   const addReview = (
@@ -835,36 +524,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const toggleSavedTailor = (tailorId: string) => {
-    setCustomer((prev) => {
-      const exists = prev.savedTailorIds.includes(tailorId);
-      const updated = exists
-        ? prev.savedTailorIds.filter((id) => id !== tailorId)
-        : [...prev.savedTailorIds, tailorId];
-
-      addToast(
-        'info',
-        exists ? 'Tailor Removed' : 'Tailor Saved',
-        exists ? 'Removed from your favorites.' : 'Saved to your favorite tailors!'
-      );
-      return { ...prev, savedTailorIds: updated };
-    });
+    void api(`/favorites/${tailorId}`, { method: 'POST' })
+      .then(loadBootstrap)
+      .then(() => addToast('info', 'Favorites Updated', 'Your favorites were saved.'))
+      .catch((error) => addToast('warning', 'Unable to update favorites', error.message));
   };
 
   const verifyTailor = (tailorId: string, isVerified: boolean) => {
-    setTailors((prev) =>
-      prev.map((t) => (t.id === tailorId ? { ...t, isVerified } : t))
-    );
-    addToast('info', 'Verification Updated', `Tailor verification status changed to: ${isVerified ? 'Verified' : 'Pending'}`);
+    void api(`/admin/tailors/${tailorId}`, {
+      method: 'PATCH',
+      body: jsonBody({ status: isVerified ? 'verified' : 'rejected' }),
+    }).then(loadBootstrap)
+      .then(() => addToast('info', 'Verification Updated', `Tailor is now ${isVerified ? 'verified' : 'rejected'}.`))
+      .catch((error) => addToast('warning', 'Unable to verify tailor', error.message));
   };
 
   const markNotificationAsRead = (id: string) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
-    );
+    void api(`/notifications/${id}`, { method: 'PATCH' })
+      .then(loadBootstrap)
+      .catch((error) => addToast('warning', 'Unable to update notification', error.message));
   };
 
-  const reorderPreviousOrder = (prevOrder: Order): string => {
-    const newId = createOrderRequest({
+  const reorderPreviousOrder = async (prevOrder: Order): Promise<string> => {
+    return createOrderRequest({
       tailorId: prevOrder.tailorId,
       serviceType: prevOrder.serviceType,
       garmentType: prevOrder.garmentType,
@@ -875,7 +557,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       deliveryOption: prevOrder.deliveryOption,
       totalAmount: prevOrder.totalAmount,
     });
-    return newId;
   };
 
   return (
@@ -888,6 +569,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         registeredUsers,
         loginWithCredentials,
         registerUser,
+        updateProfile,
         logout,
         navigateToDashboard,
         currentView,

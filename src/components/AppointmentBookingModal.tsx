@@ -9,7 +9,6 @@ export const AppointmentBookingModal: React.FC = () => {
     tailors,
     selectedTailorId,
     bookAppointment,
-    customer,
   } = useApp();
 
   const [date, setDate] = useState('2026-09-18');
@@ -21,7 +20,8 @@ export const AppointmentBookingModal: React.FC = () => {
 
   if (!isAppointmentModalOpen) return null;
 
-  const tailor = tailors.find((t) => t.id === selectedTailorId) || tailors[0];
+  const tailor = tailors.find((t) => t.id === selectedTailorId);
+  if (!tailor) return null;
 
   const timeSlots = [
     '10:30 AM',
@@ -37,9 +37,6 @@ export const AppointmentBookingModal: React.FC = () => {
     bookAppointment({
       tailorId: tailor.id,
       tailorShop: tailor.shopName,
-      customerId: customer.id,
-      customerName: customer.name,
-      customerPhone: customer.phone,
       type: appointmentType,
       appointmentType,
       date,

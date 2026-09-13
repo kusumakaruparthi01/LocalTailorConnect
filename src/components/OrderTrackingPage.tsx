@@ -27,10 +27,7 @@ export const OrderTrackingPage: React.FC = () => {
     setIsReviewModalOpen,
   } = useApp();
 
-  const order =
-    orders.find((o) => o.id === selectedOrderId) ||
-    orders.find((o) => o.id === 'LTC-10482') ||
-    orders[0];
+  const order = orders.find((o) => o.id === selectedOrderId);
 
   if (!order) {
     return (

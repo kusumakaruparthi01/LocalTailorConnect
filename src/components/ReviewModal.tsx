@@ -20,7 +20,8 @@ export const ReviewModal: React.FC = () => {
 
   if (!isReviewModalOpen) return null;
 
-  const tailor = tailors.find((t) => t.id === selectedTailorId) || tailors[0];
+  const tailor = tailors.find((t) => t.id === selectedTailorId);
+  if (!tailor) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

@@ -153,7 +153,7 @@ export const SmartMatcherPage: React.FC = () => {
       </div>
 
       {/* Result Card */}
-      {hasCalculated && (
+      {hasCalculated && bestMatch && (
         <div className="bg-white rounded-3xl border-2 border-amber-800/80 p-6 sm:p-8 shadow-lg animate-in fade-in slide-in-from-bottom duration-500 space-y-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-xs font-bold text-emerald-800 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">

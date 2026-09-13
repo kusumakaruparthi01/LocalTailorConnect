@@ -2,7 +2,12 @@ node_modules/
 build/
 dist/
 coverage/
+.vite/
+.vercel/
+playwright-report/
+test-results/
 .DS_Store
 *.log
+*.tsbuildinfo
 .env*
 !.env.example

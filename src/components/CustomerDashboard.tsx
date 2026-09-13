@@ -45,26 +45,24 @@ export const CustomerDashboard: React.FC = () => {
   const customerOrders = orders.filter((o) => o.customerId === customer.id);
   const activeOrders = customerOrders.filter((o) => o.status !== 'Completed');
   const completedOrders = customerOrders.filter((o) => o.status === 'Completed');
+  const customerInitial = customer.name.trim().charAt(0).toUpperCase() || 'U';
 
   // Saved tailors list
   const savedTailorsList = tailors.filter((t) => customer.savedTailorIds.includes(t.id));
 
   // Chat message state
   const [chatInput, setChatInput] = useState('');
-  const [activeChatTailorId, setActiveChatTailorId] = useState('tailor_01');
+  const [activeChatOrderId, setActiveChatOrderId] = useState('');
+  const currentChatOrder = customerOrders.find((order) => order.id === activeChatOrderId) || customerOrders[0];
 
   const currentChatTailor =
-    tailors.find((t) => t.id === activeChatTailorId) || tailors[0];
+    tailors.find((t) => t.id === currentChatOrder?.tailorId);
 
   const handleSendChat = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!chatInput.trim()) return;
+    if (!chatInput.trim() || !currentChatOrder) return;
     sendMessage({
-      orderId: 'LTC-10482',
-      senderId: customer.id,
-      senderName: customer.name,
-      senderRole: 'customer',
-      recipientId: currentChatTailor.id,
+      orderId: currentChatOrder.id,
       text: chatInput.trim(),
     });
     setChatInput('');
@@ -75,11 +73,12 @@ export const CustomerDashboard: React.FC = () => {
       {/* Header Welcome Bar */}
       <div className="bg-white p-6 sm:p-10 rounded-3xl border border-stone-200/90 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="flex items-center gap-5">
-          <img
-            src={customer.avatar}
-            alt={customer.name}
-            className="w-18 h-18 sm:w-20 sm:h-20 rounded-2xl object-cover border-2 border-amber-800/30 shadow-sm"
-          />
+          <div
+            className="w-18 h-18 sm:w-20 sm:h-20 rounded-2xl bg-amber-800 text-white flex items-center justify-center text-2xl font-bold border-2 border-amber-700 shadow-sm"
+            aria-label={`${customer.name} profile initial`}
+          >
+            {customerInitial}
+          </div>
           <div className="space-y-1">
             <div className="inline-flex items-center gap-2 text-xs font-bold text-amber-800 uppercase tracking-wider">
               <Sparkles className="w-3.5 h-3.5" />
@@ -303,7 +302,7 @@ export const CustomerDashboard: React.FC = () => {
                       <button
                         onClick={() => {
                           setActiveTab('messages');
-                          setActiveChatTailorId(ord.tailorId);
+                          setActiveChatOrderId(ord.id);
                         }}
                         className="px-3.5 py-2.5 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-800 text-xs font-bold flex items-center gap-1.5 transition-colors"
                       >
@@ -485,12 +484,15 @@ export const CustomerDashboard: React.FC = () => {
             <h3 className="text-xs font-bold uppercase tracking-wider text-stone-500 px-2">
               Atelier Conversations
             </h3>
-            {tailors.slice(0, 3).map((t) => (
+            {customerOrders.map((order) => {
+              const t = tailors.find((tailor) => tailor.id === order.tailorId);
+              if (!t) return null;
+              return (
               <div
-                key={t.id}
-                onClick={() => setActiveChatTailorId(t.id)}
+                key={order.id}
+                onClick={() => setActiveChatOrderId(order.id)}
                 className={`p-3 rounded-2xl cursor-pointer transition-all flex items-center gap-3 ${
-                  activeChatTailorId === t.id
+                  currentChatOrder?.id === order.id
                     ? 'bg-white border border-stone-200 shadow-xs ring-1 ring-stone-200'
                     : 'hover:bg-stone-100'
                 }`}
@@ -502,10 +504,11 @@ export const CustomerDashboard: React.FC = () => {
                 />
                 <div className="flex-1 min-w-0">
                   <h4 className="text-xs font-bold text-stone-900 truncate">{t.shopName}</h4>
-                  <p className="text-[11px] text-stone-500 truncate">Tap to consult with master</p>
+                  <p className="text-[11px] text-stone-500 truncate">{order.garmentType} · {order.status}</p>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
 
           {/* Right active chat window */}
@@ -514,17 +517,17 @@ export const CustomerDashboard: React.FC = () => {
             <div className="p-4 border-b border-stone-200 flex items-center justify-between bg-white">
               <div className="flex items-center gap-3">
                 <img
-                  src={currentChatTailor.avatar}
-                  alt={currentChatTailor.shopName}
+                  src={currentChatTailor?.avatar}
+                  alt={currentChatTailor?.shopName || 'Tailor'}
                   className="w-10 h-10 rounded-xl object-cover"
                 />
                 <div>
                   <h4 className="font-serif font-bold text-sm text-stone-900">
-                    {currentChatTailor.shopName}
+                    {currentChatTailor?.shopName || 'Select an order'}
                   </h4>
                   <span className="text-[10px] text-emerald-600 font-bold flex items-center gap-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                    <span>Online • Active Order #LTC-10482</span>
+                    <span>{currentChatOrder ? `Order #${currentChatOrder.orderNumber || currentChatOrder.id}` : 'No conversation selected'}</span>
                   </span>
                 </div>
               </div>
@@ -532,8 +535,8 @@ export const CustomerDashboard: React.FC = () => {
 
             {/* Chat messages */}
             <div className="p-5 space-y-3.5 overflow-y-auto max-h-80 flex-1 bg-stone-50/40">
-              {messages.map((m) => {
-                const isMe = m.senderRole === 'customer';
+              {messages.filter((message) => message.orderId === currentChatOrder?.id).map((m) => {
+                const isMe = m.senderId === customer.id;
                 return (
                   <div
                     key={m.id}

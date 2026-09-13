@@ -20,6 +20,7 @@ import {
 
 export const TailorDashboard: React.FC = () => {
   const {
+    currentUser,
     tailorProfile,
     orders,
     updateOrderStatus,
@@ -48,6 +49,11 @@ export const TailorDashboard: React.FC = () => {
   // Tailor's orders
   const tailorOrders = orders.filter((o) => o.tailorId === tailorProfile.id);
   const activeOrders = tailorOrders.filter((o) => o.status !== 'Completed');
+  const [activeChatOrderId, setActiveChatOrderId] = useState('');
+  const activeChatOrder = tailorOrders.find((order) => order.id === activeChatOrderId) || tailorOrders[0];
+  const monthlyEarnings = tailorOrders
+    .filter((order) => order.paymentStatus === 'Paid')
+    .reduce((sum, order) => sum + order.totalAmount, 0);
 
   const statusOptions: OrderStatus[] = [
     'Request Received',
@@ -71,13 +77,9 @@ export const TailorDashboard: React.FC = () => {
 
   const handleSendTailorChat = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!chatText.trim()) return;
+    if (!chatText.trim() || !activeChatOrder) return;
     sendMessage({
-      orderId: 'LTC-10482',
-      senderId: tailorProfile.id,
-      senderName: tailorProfile.shopName,
-      senderRole: 'tailor',
-      recipientId: 'cust_01',
+      orderId: activeChatOrder.id,
       text: chatText.trim(),
     });
     setChatText('');
@@ -125,10 +127,8 @@ export const TailorDashboard: React.FC = () => {
           <span className="text-[11px] font-semibold text-stone-500 uppercase tracking-wide">
             This Month Earnings
           </span>
-          <div className="font-serif text-3xl font-bold text-stone-900 mt-1">₹34,800</div>
-          <span className="text-[11px] text-emerald-700 mt-1 block font-medium">
-            +18% from last month
-          </span>
+          <div className="font-serif text-3xl font-bold text-stone-900 mt-1">₹{monthlyEarnings}</div>
+          <span className="text-[11px] text-emerald-700 mt-1 block font-medium">Recorded paid orders</span>
         </div>
 
         <div className="bg-white p-5 rounded-2xl border border-stone-200 shadow-xs">
@@ -388,7 +388,7 @@ export const TailorDashboard: React.FC = () => {
                 <div>
                   <h4 className="font-bold text-stone-900">{a.customerName}</h4>
                   <p className="text-stone-500 mt-0.5">
-                    {a.appointmentType || a.type} • Phone: {a.customerPhone || '+91 98401 23456'}
+                    {a.appointmentType || a.type}{a.customerPhone ? ` • Phone: ${a.customerPhone}` : ''}
                   </p>
                   <p className="text-stone-700 font-medium mt-1">
                     📅 {a.date} at {a.timeSlot}
@@ -410,16 +410,27 @@ export const TailorDashboard: React.FC = () => {
         <div className="bg-white rounded-3xl border border-stone-200 shadow-xs overflow-hidden flex flex-col h-[500px]">
           <div className="p-4 border-b border-stone-200 bg-stone-50">
             <h3 className="font-serif font-bold text-base text-stone-900">
-              Live Chat with Ananya Sharma (Order #LTC-10482)
+              {activeChatOrder ? `Chat with ${activeChatOrder.customerName} (Order #${activeChatOrder.orderNumber || activeChatOrder.id})` : 'No customer conversations'}
             </h3>
             <span className="text-[11px] text-stone-500">
               Respond directly to clarify fabric or measurement adjustments
             </span>
+            {tailorOrders.length > 0 && (
+              <select
+                value={activeChatOrder?.id || ''}
+                onChange={(event) => setActiveChatOrderId(event.target.value)}
+                className="mt-2 text-xs border border-stone-200 rounded-lg p-2 bg-white"
+              >
+                {tailorOrders.map((order) => (
+                  <option key={order.id} value={order.id}>{order.customerName} · {order.garmentType}</option>
+                ))}
+              </select>
+            )}
           </div>
 
           <div className="p-4 space-y-3 overflow-y-auto flex-1 bg-stone-50/30">
-            {messages.map((m) => {
-              const isTailor = m.senderRole === 'tailor';
+            {messages.filter((message) => message.orderId === activeChatOrder?.id).map((m) => {
+              const isTailor = m.senderId === currentUser?.id;
               return (
                 <div
                   key={m.id}

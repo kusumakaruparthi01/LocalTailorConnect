@@ -13,6 +13,7 @@ import { SmartMatcherPage } from './components/SmartMatcherPage';
 import { OrderTrackingPage } from './components/OrderTrackingPage';
 import { PaymentPage } from './components/PaymentPage';
 import { AuthPages } from './components/AuthPages';
+import { ProfileSettingsPage } from './components/ProfileSettingsPage';
 import { CustomServiceRequestModal } from './components/CustomServiceRequestModal';
 import { AppointmentBookingModal } from './components/AppointmentBookingModal';
 import { ReviewModal } from './components/ReviewModal';
@@ -52,8 +53,21 @@ const MainContent: React.FC = () => {
             <AdminDashboard />
           </RoleGuard>
         )}
-        {currentView === 'track-order' && <OrderTrackingPage />}
-        {currentView === 'payment' && <PaymentPage />}
+        {currentView === 'profile-settings' && (
+          <RoleGuard allowedRoles={['customer', 'tailor', 'admin']} roleTitle="Account Profile">
+            <ProfileSettingsPage />
+          </RoleGuard>
+        )}
+        {currentView === 'track-order' && (
+          <RoleGuard allowedRoles={['customer', 'tailor']} roleTitle="Order Participant">
+            <OrderTrackingPage />
+          </RoleGuard>
+        )}
+        {currentView === 'payment' && (
+          <RoleGuard allowedRoles={['customer']} roleTitle="Customer Payment">
+            <PaymentPage />
+          </RoleGuard>
+        )}
         {(currentView === 'customer-login' ||
           currentView === 'customer-register' ||
           currentView === 'tailor-login' ||

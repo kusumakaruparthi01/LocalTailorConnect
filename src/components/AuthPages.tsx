@@ -26,12 +26,15 @@ export const AuthPages: React.FC = () => {
   const isRegister = currentView === 'customer-register' || currentView === 'tailor-register';
 
   // Login form state
-  const [loginIdentifier, setLoginIdentifier] = useState('priya.sharma@example.com');
-  const [loginPassword, setLoginPassword] = useState('password123');
+  const [loginIdentifier, setLoginIdentifier] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
   const [loginError, setLoginError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Register form state
-  const [registerRole, setRegisterRole] = useState<'customer' | 'tailor'>('customer');
+  const [registerRole, setRegisterRole] = useState<'customer' | 'tailor'>(
+    currentView === 'tailor-register' ? 'tailor' : 'customer'
+  );
   const [regName, setRegName] = useState('');
   const [regEmail, setRegEmail] = useState('');
   const [regPhone, setRegPhone] = useState('');
@@ -39,34 +42,32 @@ export const AuthPages: React.FC = () => {
   const [regCity, setRegCity] = useState('Pudukkottai');
   const [regShopName, setRegShopName] = useState('');
 
-  const handleLoginSubmit = (e: React.FormEvent) => {
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError('');
-
-    const result = loginWithCredentials(loginIdentifier, loginPassword);
+    setIsSubmitting(true);
+    const result = await loginWithCredentials(loginIdentifier, loginPassword);
+    setIsSubmitting(false);
     if (!result.success) {
       setLoginError(result.message || 'Invalid credentials. Please check your details.');
     }
   };
 
-  const handleRegisterSubmit = (e: React.FormEvent) => {
+  const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    registerUser({
+    setLoginError('');
+    setIsSubmitting(true);
+    const result = await registerUser({
       role: registerRole,
       name: regName,
       email: regEmail,
-      password: regPassword || 'password123',
+      password: regPassword,
       phone: regPhone,
       city: regCity,
       shopName: registerRole === 'tailor' ? regShopName : undefined,
     });
-  };
-
-  const fillAndLoginDemo = (email: string) => {
-    setLoginIdentifier(email);
-    setLoginPassword('password123');
-    loginWithCredentials(email, 'password123');
+    setIsSubmitting(false);
+    if (!result.success) setLoginError(result.message || 'Unable to create account.');
   };
 
   return (
@@ -90,50 +91,6 @@ export const AuthPages: React.FC = () => {
         {/* ================= LOGIN VIEW ================= */}
         {!isRegister && (
           <>
-            {/* Quick Demo Credentials Box */}
-            <div className="p-4 bg-stone-50 rounded-2xl border border-stone-200/80 space-y-2.5">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-stone-500 block text-center">
-                Instant 1-Click Role Login (Testing Accounts)
-              </span>
-              <div className="grid grid-cols-3 gap-2">
-                <button
-                  type="button"
-                  onClick={() => fillAndLoginDemo('priya.sharma@example.com')}
-                  className="p-2.5 bg-white hover:bg-amber-50 hover:border-amber-300 border border-stone-200 rounded-xl text-left transition-all group"
-                >
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-stone-900 group-hover:text-amber-900">
-                    <User className="w-3.5 h-3.5 text-amber-700" />
-                    <span>Customer</span>
-                  </div>
-                  <p className="text-[10px] text-stone-500 mt-0.5">Priya Sharma</p>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => fillAndLoginDemo('lakshmi.studio@example.com')}
-                  className="p-2.5 bg-white hover:bg-emerald-50 hover:border-emerald-300 border border-stone-200 rounded-xl text-left transition-all group"
-                >
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-stone-900 group-hover:text-emerald-900">
-                    <Store className="w-3.5 h-3.5 text-emerald-700" />
-                    <span>Tailor</span>
-                  </div>
-                  <p className="text-[10px] text-stone-500 mt-0.5">Lakshmi Studio</p>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => fillAndLoginDemo('rajesh.admin@localtailorconnect.in')}
-                  className="p-2.5 bg-white hover:bg-indigo-50 hover:border-indigo-300 border border-stone-200 rounded-xl text-left transition-all group"
-                >
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-stone-900 group-hover:text-indigo-900">
-                    <ShieldCheck className="w-3.5 h-3.5 text-indigo-700" />
-                    <span>Admin</span>
-                  </div>
-                  <p className="text-[10px] text-stone-500 mt-0.5">Rajesh Kumar</p>
-                </button>
-              </div>
-            </div>
-
             {/* Error banner */}
             {loginError && (
               <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl">
@@ -144,7 +101,7 @@ export const AuthPages: React.FC = () => {
             {/* Login Form */}
             <form onSubmit={handleLoginSubmit} className="space-y-4">
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-stone-700">Email or Mobile Number</label>
+                <label className="text-xs font-semibold text-stone-700">Email Address</label>
                 <div className="relative">
                   <Mail className="w-4 h-4 text-stone-400 absolute left-3 top-3" />
                   <input
@@ -169,15 +126,17 @@ export const AuthPages: React.FC = () => {
                     placeholder="••••••••"
                     className="w-full text-xs pl-9 pr-3 py-2.5 border border-stone-300 rounded-xl focus:outline-none focus:border-amber-800"
                     required
+                    minLength={8}
                   />
                 </div>
               </div>
 
               <button
                 type="submit"
+                disabled={isSubmitting}
                 className="w-full py-3 bg-amber-800 hover:bg-amber-900 text-white font-bold text-xs sm:text-sm rounded-xl shadow-xs transition-all flex items-center justify-center gap-2 active:scale-95"
               >
-                <span>Sign In</span>
+                <span>{isSubmitting ? 'Signing in…' : 'Sign In'}</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </form>
@@ -323,6 +282,7 @@ export const AuthPages: React.FC = () => {
                     placeholder="••••••••"
                     className="w-full text-xs p-2.5 border border-stone-300 rounded-xl focus:outline-none focus:border-amber-800"
                     required
+                    minLength={8}
                   />
                 </div>
               </div>
@@ -330,10 +290,11 @@ export const AuthPages: React.FC = () => {
 
             <button
               type="submit"
+              disabled={isSubmitting}
               className="w-full py-3 bg-amber-800 hover:bg-amber-900 text-white font-bold text-xs sm:text-sm rounded-xl shadow-xs transition-all flex items-center justify-center gap-2 active:scale-95"
             >
               <span>
-                {registerRole === 'tailor' ? 'Complete Tailor Registration' : 'Complete Customer Sign Up'}
+                {isSubmitting ? 'Creating account…' : registerRole === 'tailor' ? 'Complete Tailor Registration' : 'Complete Customer Sign Up'}
               </span>
               <ArrowRight className="w-4 h-4" />
             </button>

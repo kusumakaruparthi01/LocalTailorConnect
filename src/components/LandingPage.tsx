@@ -169,7 +169,7 @@ export const LandingPage: React.FC = () => {
       city: 'Pudukkottai',
       rating: 5,
       comment:
-        '“I needed two bridal blouses stitched in 4 days for my sister’s wedding. Lakshmi Stitching Studio delivered both with flawless prince-cut fitting. Saving my measurements digitally made reordering effortless!”',
+        '“I found a local tailor, shared my requirements, and tracked the fitting from one place. Saving my measurements made reordering effortless.”',
       role: 'Verified Customer',
       garment: 'Bridal Blouse Stitching',
       date: 'Order delivered 3 days ago',
@@ -365,7 +365,7 @@ export const LandingPage: React.FC = () => {
                     </div>
 
                     <h3 className="font-serif text-2xl font-bold tracking-tight">
-                      Lakshmi Stitching Studio
+                      Sample Tailor Studio
                     </h3>
 
                     <p className="text-xs text-stone-300 flex items-center gap-3">
@@ -391,7 +391,7 @@ export const LandingPage: React.FC = () => {
                   <div>
                     <div className="flex items-center gap-1.5">
                       <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">
-                        Live Order #LTC-10482
+                        Example order progress
                       </span>
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
                     </div>

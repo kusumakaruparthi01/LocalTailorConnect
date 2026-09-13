@@ -16,46 +16,22 @@ import {
 } from 'lucide-react';
 
 export const AdminDashboard: React.FC = () => {
-  const { tailors, orders, addToast, setCurrentView, setSelectedOrderId } = useApp();
+  const { tailors, orders, verifyTailor, setCurrentView, setSelectedOrderId } = useApp();
 
   const [activeTab, setActiveTab] = useState<'verifications' | 'orders' | 'tailors'>('verifications');
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Tailors pending verification
-  const [pendingVerifications, setPendingVerifications] = useState([
-    {
-      id: 'pen_01',
-      shopName: 'Shree Sai Tailoring Works',
-      owner: 'Sundaram P.',
-      city: 'Pudukkottai',
-      phone: '+91 98421 90812',
-      idType: 'Udyam MSME & Aadhaar',
-      specialty: 'Mens & Uniforms',
-      date: '14 Sep 2026',
-    },
-    {
-      id: 'pen_02',
-      shopName: 'Meenakshi Bridal Boutique',
-      owner: 'Meena R.',
-      city: 'Madurai',
-      phone: '+91 94431 22910',
-      idType: 'Trade License & GSTIN',
-      specialty: 'Aari Bridal Blouses',
-      date: '15 Sep 2026',
-    },
-  ]);
+  const pendingVerifications = tailors.filter((tailor) => !tailor.isVerified);
 
   const handleApprove = (shopName: string, id: string) => {
-    setPendingVerifications(pendingVerifications.filter((p) => p.id !== id));
-    addToast('success', 'Tailor Verified', `${shopName} has been approved and is now live!`);
+    verifyTailor(id, true);
   };
 
   const handleReject = (shopName: string, id: string) => {
-    setPendingVerifications(pendingVerifications.filter((p) => p.id !== id));
-    addToast('info', 'Application Declined', `${shopName} verification rejected.`);
+    verifyTailor(id, false);
   };
 
-  const totalGMV = orders.reduce((acc, o) => acc + o.totalAmount, 0) + 482000;
+  const totalGMV = orders.reduce((acc, o) => acc + o.totalAmount, 0);
   const platformRevenue = Math.round(totalGMV * 0.05);
 
   return (
@@ -90,9 +66,9 @@ export const AdminDashboard: React.FC = () => {
           <span className="text-[11px] font-semibold text-stone-500 uppercase tracking-wide">
             Verified Partner Tailors
           </span>
-          <div className="font-serif text-3xl font-bold text-stone-900 mt-1">542</div>
+          <div className="font-serif text-3xl font-bold text-stone-900 mt-1">{tailors.filter((tailor) => tailor.isVerified).length}</div>
           <span className="text-[11px] text-emerald-700 mt-1 block font-medium">
-            Across 52 Indian Cities
+            Across {new Set(tailors.map((tailor) => tailor.city)).size} cities
           </span>
         </div>
 
@@ -100,8 +76,8 @@ export const AdminDashboard: React.FC = () => {
           <span className="text-[11px] font-semibold text-stone-500 uppercase tracking-wide">
             Total Completed Orders
           </span>
-          <div className="font-serif text-3xl font-bold text-stone-900 mt-1">10,845</div>
-          <span className="text-[11px] text-stone-500 mt-1 block">99.4% Fit Satisfaction</span>
+          <div className="font-serif text-3xl font-bold text-stone-900 mt-1">{orders.filter((order) => order.status === 'Completed').length}</div>
+          <span className="text-[11px] text-stone-500 mt-1 block">Recorded completed orders</span>
         </div>
 
         <div className="bg-white p-5 rounded-2xl border border-stone-200 shadow-xs">
@@ -190,14 +166,14 @@ export const AdminDashboard: React.FC = () => {
                     <div className="flex items-center gap-2">
                       <h4 className="font-bold text-sm text-stone-900">{p.shopName}</h4>
                       <span className="text-[10px] font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded">
-                        {p.specialty}
+                        {p.specializations.join(', ') || 'General tailoring'}
                       </span>
                     </div>
                     <p className="text-xs text-stone-500">
-                      Master: <strong>{p.owner}</strong> • {p.city} • {p.phone}
+                      Master: <strong>{p.name}</strong> • {p.city} • {p.phone}
                     </p>
                     <p className="text-[11px] text-stone-400">
-                      Submitted Docs: {p.idType} • Date: {p.date}
+                      Account pending identity and business verification
                     </p>
                   </div>
 

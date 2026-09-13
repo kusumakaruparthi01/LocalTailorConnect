@@ -35,7 +35,10 @@ export const TailorProfilePage: React.FC = () => {
     'services'
   );
 
-  const tailor = tailors.find((t) => t.id === selectedTailorId) || tailors[0];
+  const tailor = tailors.find((t) => t.id === selectedTailorId);
+  if (!tailor) {
+    return <div className="max-w-4xl mx-auto py-12 px-4 text-center text-sm text-stone-500">Tailor profile not found.</div>;
+  }
   const isSaved = customer.savedTailorIds.includes(tailor.id);
 
   const handleShare = () => {

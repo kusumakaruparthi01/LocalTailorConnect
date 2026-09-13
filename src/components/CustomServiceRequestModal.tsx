@@ -59,7 +59,8 @@ export const CustomServiceRequestModal: React.FC = () => {
 
   if (!isCustomRequestOpen) return null;
 
-  const targetTailor = tailors.find((t) => t.id === selectedTailorId) || tailors[0];
+  const targetTailor = tailors.find((t) => t.id === selectedTailorId);
+  if (!targetTailor) return null;
 
   const serviceOptions: Array<'New Clothing' | 'Alteration' | 'Repair' | 'Custom Design'> = [
     'New Clothing',
@@ -111,10 +112,10 @@ export const CustomServiceRequestModal: React.FC = () => {
     if (step > 1) setStep(step - 1);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const selectedProfile = measurementProfiles.find((p) => p.id === selectedProfileId);
 
-    const newOrderId = createOrderRequest({
+    const newOrderId = await createOrderRequest({
       tailorId: targetTailor.id,
       serviceType,
       garmentType,
@@ -461,7 +462,7 @@ export const CustomServiceRequestModal: React.FC = () => {
                   {
                     key: 'Pickup from tailor',
                     title: 'Pickup from Boutique Workshop',
-                    desc: 'Visit Lakshmi Stitching Studio for an instant trial room fit.',
+                    desc: `Visit ${targetTailor.shopName} for an in-person trial fitting.`,
                   },
                   {
                     key: 'Customer pickup',

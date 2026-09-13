@@ -9,28 +9,22 @@ export const QuotationModal: React.FC = () => {
     orders,
     selectedOrderId,
     setCurrentView,
+    respondToQuotation,
   } = useApp();
 
   if (!isQuotationModalOpen) return null;
 
-  const order =
-    orders.find((o) => o.id === selectedOrderId) ||
-    orders.find((o) => o.id === 'LTC-10482') ||
-    orders[0];
+  const order = orders.find((o) => o.id === selectedOrderId);
 
-  const quotation = order?.quotation || {
-    items: [
-      { description: 'Boat-Neck Blouse Base Stitching', price: 450 },
-      { description: 'Aari Zari Embroidery & Border Piping', price: 150 },
-      { description: 'Doorstep Pickup & Delivery', price: 50 },
-    ],
-    totalAmount: 650,
-    validUntil: 'Valid for 5 days',
-  };
+  if (!order) return null;
+
+  const quotation = order.quotation;
+  if (!quotation) return null;
 
   const handleAccept = () => {
+    respondToQuotation(order.id, true);
     setIsQuotationModalOpen(false);
-    setCurrentView('payment');
+    setCurrentView('track-order');
   };
 
   return (
@@ -104,7 +98,7 @@ export const QuotationModal: React.FC = () => {
               onClick={handleAccept}
               className="px-5 py-2.5 bg-amber-800 hover:bg-amber-900 text-white text-xs font-bold rounded-xl shadow-xs transition-all flex items-center gap-1.5"
             >
-              <span>Accept & Proceed to Pay</span>
+              <span>Accept Quotation</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>

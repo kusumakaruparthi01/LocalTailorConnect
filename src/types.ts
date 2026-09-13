@@ -134,7 +134,8 @@ export interface Quotation {
 }
 
 export interface Order {
-  id: string; // e.g. "LTC-10482"
+  id: string;
+  orderNumber?: string;
   customerId: string;
   customerName: string;
   customerPhone: string;

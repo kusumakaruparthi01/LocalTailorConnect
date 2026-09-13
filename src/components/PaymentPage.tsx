@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import confetti from 'canvas-confetti';
 import {
   CreditCard,
   ShieldCheck,
@@ -23,37 +22,34 @@ export const PaymentPage: React.FC = () => {
   } = useApp();
 
   const [paymentMethod, setPaymentMethod] = useState<'upi' | 'card' | 'netbanking' | 'cod'>('upi');
-  const [upiId, setUpiId] = useState('ananya@okhdfcbank');
-  const [cardNumber, setCardNumber] = useState('4532 •••• •••• 8912');
-  const [expiry, setExpiry] = useState('08/29');
-  const [cvv, setCvv] = useState('•••');
+  const [upiId, setUpiId] = useState('');
+  const [cardNumber, setCardNumber] = useState('');
+  const [expiry, setExpiry] = useState('');
+  const [cvv, setCvv] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const order =
-    orders.find((o) => o.id === selectedOrderId) ||
-    orders.find((o) => o.paymentStatus !== 'Paid') ||
-    orders[0];
+  const order = orders.find((o) => o.id === selectedOrderId);
 
   const handlePay = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!order) return;
     setIsProcessing(true);
 
     setTimeout(() => {
       setIsProcessing(false);
       markOrderAsPaid(order.id);
-      confetti({
-        particleCount: 100,
-        spread: 70,
-        origin: { y: 0.6 },
-      });
       addToast(
-        'success',
-        'Payment Successful',
-        `₹${order.totalAmount} securely authorized into Escrow for Order #${order.id}.`
+        'warning',
+        'Payment provider not configured',
+        'No charge was made and this order was not marked as paid.'
       );
       setCurrentView('track-order');
     }, 1200);
   };
+
+  if (!order) {
+    return <div className="max-w-4xl mx-auto py-12 px-4 text-center text-sm text-stone-500">Select one of your orders before opening payment.</div>;
+  }
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">

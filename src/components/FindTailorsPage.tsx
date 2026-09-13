@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
+import { safeImageUrl } from '../lib/safe-url';
 import {
   Search,
   MapPin,
@@ -42,7 +43,7 @@ export const FindTailorsPage: React.FC = () => {
   const [selectedService, setSelectedService] = useState('All');
   const [maxDistance, setMaxDistance] = useState<number>(15);
   const [maxPrice, setMaxPrice] = useState<number>(3000);
-  const [minRating, setMinRating] = useState<number>(4.0);
+  const [minRating, setMinRating] = useState<number>(0);
   const [onlyAvailableToday, setOnlyAvailableToday] = useState(false);
   const [onlyHomePickup, setOnlyHomePickup] = useState(false);
   const [onlyDelivery, setOnlyDelivery] = useState(false);
@@ -50,7 +51,7 @@ export const FindTailorsPage: React.FC = () => {
 
   // View mode: Grid or Map
   const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid');
-  const [activeMapTailorId, setActiveMapTailorId] = useState<string>('tailor_01');
+  const [activeMapTailorId, setActiveMapTailorId] = useState<string>('');
 
   const servicesList = [
     'All',
@@ -438,7 +439,7 @@ export const FindTailorsPage: React.FC = () => {
                 <div className="p-6 bg-stone-50 border-t border-stone-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                   <div className="flex items-center gap-4">
                     <img
-                      src={activeMapTailor.avatar}
+                      src={safeImageUrl(activeMapTailor.avatar)}
                       alt={activeMapTailor.shopName}
                       className="w-16 h-16 rounded-2xl object-cover border-2 border-white shadow-sm"
                     />
@@ -492,7 +493,7 @@ export const FindTailorsPage: React.FC = () => {
                   {/* Card Cover & Badges */}
                   <div className="relative h-48 overflow-hidden bg-stone-100">
                     <img
-                      src={tailor.coverImage}
+                      src="/tailor-placeholder.svg"
                       alt={tailor.shopName}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                     />
