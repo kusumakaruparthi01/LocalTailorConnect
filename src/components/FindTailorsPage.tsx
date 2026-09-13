@@ -1,6 +1,5 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
-import { safeImageUrl } from '../lib/safe-url';
 import {
   Search,
   MapPin,
@@ -16,8 +15,6 @@ import {
   ShieldCheck,
   Truck,
   Home,
-  Map as MapIcon,
-  Grid,
   Heart,
   Eye,
   BadgeCheck,
@@ -33,7 +30,6 @@ export const FindTailorsPage: React.FC = () => {
     setIsCustomRequestOpen,
     setIsAppointmentModalOpen,
     selectedCity,
-    pincode,
     customer,
     toggleSavedTailor,
   } = useApp();
@@ -41,17 +37,12 @@ export const FindTailorsPage: React.FC = () => {
   // Search & Filter States
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedService, setSelectedService] = useState('All');
-  const [maxDistance, setMaxDistance] = useState<number>(15);
   const [maxPrice, setMaxPrice] = useState<number>(3000);
   const [minRating, setMinRating] = useState<number>(0);
   const [onlyAvailableToday, setOnlyAvailableToday] = useState(false);
   const [onlyHomePickup, setOnlyHomePickup] = useState(false);
   const [onlyDelivery, setOnlyDelivery] = useState(false);
   const [minExperience, setMinExperience] = useState<number>(0);
-
-  // View mode: Grid or Map
-  const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid');
-  const [activeMapTailorId, setActiveMapTailorId] = useState<string>('');
 
   const servicesList = [
     'All',
@@ -76,9 +67,6 @@ export const FindTailorsPage: React.FC = () => {
         t.specializations.some((s) => s.toLowerCase().includes(searchTerm.toLowerCase()));
 
       if (!matchesSearch) return false;
-
-      // Distance filter
-      if (t.distanceKm > maxDistance) return false;
 
       // Price filter
       if (t.startingPrice > maxPrice) return false;
@@ -107,7 +95,6 @@ export const FindTailorsPage: React.FC = () => {
   }, [
     tailors,
     searchTerm,
-    maxDistance,
     maxPrice,
     minRating,
     minExperience,
@@ -117,7 +104,14 @@ export const FindTailorsPage: React.FC = () => {
     selectedService,
   ]);
 
-  const activeMapTailor = tailors.find((t) => t.id === activeMapTailorId) || tailors[0];
+  const normalizedSelectedCity = selectedCity.trim().toLowerCase();
+  const sameCityTailors = filteredTailors.filter(
+    (tailor) => tailor.city.trim().toLowerCase() === normalizedSelectedCity
+  );
+  const otherCityTailors = filteredTailors.filter(
+    (tailor) => tailor.city.trim().toLowerCase() !== normalizedSelectedCity
+  );
+  const orderedTailors = [...sameCityTailors, ...otherCityTailors];
 
   const handleViewProfile = (tailorId: string) => {
     setSelectedTailorId(tailorId);
@@ -135,9 +129,8 @@ export const FindTailorsPage: React.FC = () => {
   };
 
   const handleResetFilters = () => {
-    setMaxDistance(15);
     setMaxPrice(3000);
-    setMinRating(4.0);
+    setMinRating(0);
     setOnlyAvailableToday(false);
     setOnlyHomePickup(false);
     setOnlyDelivery(false);
@@ -153,41 +146,15 @@ export const FindTailorsPage: React.FC = () => {
         <div className="space-y-1.5">
           <div className="inline-flex items-center gap-2 text-xs font-bold text-amber-800 uppercase tracking-wider">
             <MapPin className="w-3.5 h-3.5 text-amber-700" />
-            <span>Verified Atelier Directory</span>
+            <span>Local Atelier Directory</span>
           </div>
           <h1 className="font-serif text-3xl sm:text-4xl font-extrabold text-stone-950 tracking-tight">
             Find Master Tailors in {selectedCity}
           </h1>
           <p className="text-xs sm:text-sm text-stone-600">
-            Showing verified bespoke studios, bridal embroidery specialists, and alteration masters near{' '}
-            <strong className="text-stone-900 font-bold">{selectedCity}</strong> ({pincode}).
+            Tailors in <strong className="text-stone-900 font-bold">{selectedCity}</strong> are shown first,
+            followed by studios serving other cities.
           </p>
-        </div>
-
-        {/* View Switcher: Grid / Map */}
-        <div className="flex items-center gap-2 self-start md:self-auto bg-stone-100/80 p-1.5 rounded-2xl border border-stone-200">
-          <button
-            onClick={() => setViewMode('grid')}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-              viewMode === 'grid'
-                ? 'bg-white text-stone-950 shadow-xs'
-                : 'text-stone-600 hover:text-stone-900'
-            }`}
-          >
-            <Grid className="w-4 h-4" />
-            <span>Grid Cards</span>
-          </button>
-          <button
-            onClick={() => setViewMode('map')}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-              viewMode === 'map'
-                ? 'bg-white text-stone-950 shadow-xs'
-                : 'text-stone-600 hover:text-stone-900'
-            }`}
-          >
-            <MapIcon className="w-4 h-4" />
-            <span>Map View</span>
-          </button>
         </div>
       </div>
 
@@ -250,29 +217,8 @@ export const FindTailorsPage: React.FC = () => {
             </button>
           </div>
 
-          {/* Distance Filter */}
-          <div className="space-y-2.5">
-            <div className="flex items-center justify-between text-xs font-bold text-stone-900">
-              <span>Maximum Proximity</span>
-              <span className="text-amber-800 font-extrabold">{maxDistance} km</span>
-            </div>
-            <input
-              type="range"
-              min={1}
-              max={30}
-              value={maxDistance}
-              onChange={(e) => setMaxDistance(Number(e.target.value))}
-              className="w-full accent-amber-800 cursor-pointer"
-            />
-            <div className="flex justify-between text-[10px] text-stone-400 font-medium">
-              <span>1 km</span>
-              <span>15 km</span>
-              <span>30 km</span>
-            </div>
-          </div>
-
           {/* Price Budget Filter */}
-          <div className="space-y-2.5 pt-4 border-t border-stone-100">
+          <div className="space-y-2.5">
             <div className="flex items-center justify-between text-xs font-bold text-stone-900">
               <span>Starting Price Up To</span>
               <span className="text-amber-800 font-extrabold">₹{maxPrice}</span>
@@ -388,102 +334,17 @@ export const FindTailorsPage: React.FC = () => {
         <div className="lg:col-span-9 space-y-6">
           <div className="flex items-center justify-between text-xs text-stone-600 bg-white px-5 py-3.5 rounded-2xl border border-stone-200">
             <span>
-              Showing <strong className="text-stone-950 font-bold">{filteredTailors.length}</strong> vetted
-              tailors in <strong className="text-stone-950 font-bold">{selectedCity}</strong>
+              <strong className="text-stone-950 font-bold">{sameCityTailors.length}</strong> in {selectedCity}
+              {' '}and <strong className="text-stone-950 font-bold">{otherCityTailors.length}</strong> from other cities
             </span>
-            <span className="text-[11px] text-stone-500 font-medium">Sorted by Proximity & Ratings</span>
+            <span className="text-[11px] text-stone-500 font-medium">Your city is shown first</span>
           </div>
-
-          {/* Map View Mode */}
-          {viewMode === 'map' && (
-            <div className="bg-white rounded-3xl border border-stone-200 overflow-hidden shadow-sm">
-              <div className="relative h-80 sm:h-96 bg-stone-100 flex items-center justify-center overflow-hidden">
-                {/* Simulated Visual Styled Map Canvas */}
-                <div className="absolute inset-0 bg-[#EBF0E8] opacity-85" />
-                <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808018_1px,transparent_1px),linear-gradient(to_bottom,#80808018_1px,transparent_1px)] bg-[size:40px_40px]" />
-
-                {/* City Landmark Label */}
-                <div className="absolute top-4 left-4 bg-white/95 backdrop-blur-md px-3.5 py-2 rounded-2xl border border-stone-200 text-xs font-bold text-stone-900 shadow-sm flex items-center gap-2">
-                  <MapPin className="w-4 h-4 text-amber-800" />
-                  <span>{selectedCity} Artisan Hub</span>
-                </div>
-
-                {/* Simulated Pins for Tailors */}
-                {filteredTailors.map((t, idx) => {
-                  const isSelected = t.id === activeMapTailorId;
-                  const left = 15 + ((idx * 18) % 70);
-                  const top = 20 + ((idx * 20) % 60);
-
-                  return (
-                    <button
-                      key={t.id}
-                      onClick={() => setActiveMapTailorId(t.id)}
-                      style={{ left: `${left}%`, top: `${top}%` }}
-                      className={`absolute -translate-x-1/2 -translate-y-1/2 p-2 rounded-full transition-all duration-300 flex items-center gap-1.5 shadow-lg ${
-                        isSelected
-                          ? 'bg-amber-800 text-white ring-4 ring-amber-300/80 scale-110 z-30'
-                          : 'bg-white text-stone-800 border border-stone-300 hover:scale-105 z-10'
-                      }`}
-                    >
-                      <MapPin className={`w-4 h-4 ${isSelected ? 'text-amber-200' : 'text-amber-700'}`} />
-                      <span className="text-[11px] font-bold pr-1 truncate max-w-[120px]">
-                        {t.shopName.split(' ')[0]}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Active Selected Tailor on Map */}
-              {activeMapTailor && (
-                <div className="p-6 bg-stone-50 border-t border-stone-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                  <div className="flex items-center gap-4">
-                    <img
-                      src={safeImageUrl(activeMapTailor.avatar)}
-                      alt={activeMapTailor.shopName}
-                      className="w-16 h-16 rounded-2xl object-cover border-2 border-white shadow-sm"
-                    />
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h4 className="font-serif font-bold text-base text-stone-900">
-                          {activeMapTailor.shopName}
-                        </h4>
-                        <span className="text-xs text-amber-900 font-bold bg-amber-100 px-2 py-0.5 rounded-md">
-                          ⭐ {activeMapTailor.rating}
-                        </span>
-                      </div>
-                      <p className="text-xs text-stone-500 mt-0.5">
-                        📍 {activeMapTailor.distanceKm} km away • {activeMapTailor.address}
-                      </p>
-                      <p className="text-xs text-stone-700 font-medium mt-1">
-                        Specializes in: {activeMapTailor.specializations.join(' • ')}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 shrink-0">
-                    <button
-                      onClick={() => handleViewProfile(activeMapTailor.id)}
-                      className="px-4 py-2.5 rounded-xl bg-white border border-stone-300 hover:bg-stone-100 text-xs font-bold text-stone-800 transition-colors"
-                    >
-                      View Studio
-                    </button>
-                    <button
-                      onClick={() => handleRequestService(activeMapTailor.id)}
-                      className="px-4 py-2.5 rounded-xl bg-amber-800 hover:bg-amber-900 text-xs font-bold text-white shadow-xs transition-colors"
-                    >
-                      Request Service
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
 
           {/* Tailor Cards Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {filteredTailors.map((tailor) => {
+            {orderedTailors.map((tailor) => {
               const isSaved = customer.savedTailorIds.includes(tailor.id);
+              const isSameCity = tailor.city.trim().toLowerCase() === normalizedSelectedCity;
 
               return (
                 <div
@@ -525,12 +386,12 @@ export const FindTailorsPage: React.FC = () => {
                       </button>
                     </div>
 
-                    {/* Bottom overlay: Distance & Starting Price */}
+                    {/* Bottom overlay: City group & Starting Price */}
                     <div className="absolute bottom-3 left-4 right-4 flex items-end justify-between text-white">
                       <div>
                         <span className="text-xs font-semibold text-stone-200 flex items-center gap-1">
                           <MapPin className="w-3.5 h-3.5 text-amber-400" />
-                          {tailor.distanceKm} km away • {tailor.city}
+                          {isSameCity ? `In your city • ${tailor.city}` : `Serving from ${tailor.city}`}
                         </span>
                       </div>
                       <div className="bg-white/95 backdrop-blur-md px-3 py-1 rounded-xl text-stone-950 text-xs font-extrabold shadow-sm border border-stone-200">
@@ -552,6 +413,11 @@ export const FindTailorsPage: React.FC = () => {
                             {tailor.isVerified && (
                               <span title="Verified Workshop">
                                 <BadgeCheck className="w-4 h-4 text-blue-600 shrink-0" />
+                              </span>
+                            )}
+                            {!tailor.isVerified && tailor.verificationStatus === 'pending' && (
+                              <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-amber-800 border border-amber-200">
+                                Verification pending
                               </span>
                             )}
                           </div>
@@ -606,6 +472,9 @@ export const FindTailorsPage: React.FC = () => {
                           </span>
                         )}
                       </div>
+                      <p className="text-[10px] text-stone-400 mt-3">
+                        Pickup and delivery fees are calculated separately from stitching prices.
+                      </p>
                     </div>
 
                     {/* Action Buttons */}

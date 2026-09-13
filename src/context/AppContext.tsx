@@ -232,6 +232,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const data = await api<any>('/bootstrap');
     setCurrentUser(data.currentUser);
     setRoleState(data.currentUser.role);
+    if (data.currentUser.city) setSelectedCity(data.currentUser.city);
     if (data.customer) setCustomer(data.customer);
     setTailors(data.tailors);
     setOrders(data.orders);
@@ -353,6 +354,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const setCurrentView = (view: AppView) => {
+    const customerDiscoveryViews: AppView[] = ['find-tailors', 'smart-match', 'tailor-profile'];
+    if (
+      currentUser &&
+      currentUser.role !== 'customer' &&
+      customerDiscoveryViews.includes(view)
+    ) {
+      addToast('info', 'Customer Feature', 'Tailor discovery is available from customer accounts.');
+      navigateToDashboard();
+      return;
+    }
     setCurrentViewState(view);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };

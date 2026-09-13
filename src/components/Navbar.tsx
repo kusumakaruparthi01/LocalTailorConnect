@@ -59,45 +59,49 @@ export const Navbar: React.FC = () => {
           >
             Home
           </button>
-          <button
-            onClick={() => setCurrentView('find-tailors')}
-            className={`hover:text-stone-950 transition-colors ${
-              currentView === 'find-tailors' ? 'text-amber-800 font-semibold' : ''
-            }`}
-          >
-            Find Tailors
-          </button>
-          <button
-            onClick={() => {
-              setCurrentView('home');
-              setTimeout(() => {
-                document.getElementById('services')?.scrollIntoView({ behavior: 'smooth' });
-              }, 100);
-            }}
-            className="hover:text-stone-950 transition-colors"
-          >
-            Services
-          </button>
-          <button
-            onClick={() => {
-              setCurrentView('home');
-              setTimeout(() => {
-                document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' });
-              }, 100);
-            }}
-            className="hover:text-stone-950 transition-colors"
-          >
-            How It Works
-          </button>
-          <button
-            onClick={() => setCurrentView('smart-match')}
-            className={`hover:text-stone-950 transition-colors flex items-center gap-1.5 ${
-              currentView === 'smart-match' ? 'text-amber-800 font-semibold' : ''
-            }`}
-          >
-            <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-            <span>Smart Match</span>
-          </button>
+          {(!isAuthenticated || currentUser?.role === 'customer') && (
+            <>
+              <button
+                onClick={() => setCurrentView('find-tailors')}
+                className={`hover:text-stone-950 transition-colors ${
+                  currentView === 'find-tailors' ? 'text-amber-800 font-semibold' : ''
+                }`}
+              >
+                Find Tailors
+              </button>
+              <button
+                onClick={() => {
+                  setCurrentView('home');
+                  setTimeout(() => {
+                    document.getElementById('services')?.scrollIntoView({ behavior: 'smooth' });
+                  }, 100);
+                }}
+                className="hover:text-stone-950 transition-colors"
+              >
+                Services
+              </button>
+              <button
+                onClick={() => {
+                  setCurrentView('home');
+                  setTimeout(() => {
+                    document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' });
+                  }, 100);
+                }}
+                className="hover:text-stone-950 transition-colors"
+              >
+                How It Works
+              </button>
+              <button
+                onClick={() => setCurrentView('smart-match')}
+                className={`hover:text-stone-950 transition-colors flex items-center gap-1.5 ${
+                  currentView === 'smart-match' ? 'text-amber-800 font-semibold' : ''
+                }`}
+              >
+                <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                <span>Smart Match</span>
+              </button>
+            </>
+          )}
         </nav>
 
         {/* Right Authentication & Actions */}
@@ -209,49 +213,53 @@ export const Navbar: React.FC = () => {
             >
               Home
             </button>
-            <button
-              onClick={() => {
-                setCurrentView('find-tailors');
-                setMobileMenuOpen(false);
-              }}
-              className="text-left py-2 hover:text-amber-800"
-            >
-              Find Tailors
-            </button>
-            <button
-              onClick={() => {
-                setCurrentView('smart-match');
-                setMobileMenuOpen(false);
-              }}
-              className="text-left py-2 hover:text-amber-800 flex items-center gap-1.5"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-              <span>Smart Match</span>
-            </button>
-            <button
-              onClick={() => {
-                setCurrentView('home');
-                setMobileMenuOpen(false);
-                setTimeout(() => {
-                  document.getElementById('services')?.scrollIntoView({ behavior: 'smooth' });
-                }, 100);
-              }}
-              className="text-left py-2 hover:text-amber-800"
-            >
-              Services
-            </button>
-            <button
-              onClick={() => {
-                setCurrentView('home');
-                setMobileMenuOpen(false);
-                setTimeout(() => {
-                  document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' });
-                }, 100);
-              }}
-              className="text-left py-2 hover:text-amber-800"
-            >
-              How It Works
-            </button>
+            {(!isAuthenticated || currentUser?.role === 'customer') && (
+              <>
+                <button
+                  onClick={() => {
+                    setCurrentView('find-tailors');
+                    setMobileMenuOpen(false);
+                  }}
+                  className="text-left py-2 hover:text-amber-800"
+                >
+                  Find Tailors
+                </button>
+                <button
+                  onClick={() => {
+                    setCurrentView('smart-match');
+                    setMobileMenuOpen(false);
+                  }}
+                  className="text-left py-2 hover:text-amber-800 flex items-center gap-1.5"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                  <span>Smart Match</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setCurrentView('home');
+                    setMobileMenuOpen(false);
+                    setTimeout(() => {
+                      document.getElementById('services')?.scrollIntoView({ behavior: 'smooth' });
+                    }, 100);
+                  }}
+                  className="text-left py-2 hover:text-amber-800"
+                >
+                  Services
+                </button>
+                <button
+                  onClick={() => {
+                    setCurrentView('home');
+                    setMobileMenuOpen(false);
+                    setTimeout(() => {
+                      document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' });
+                    }, 100);
+                  }}
+                  className="text-left py-2 hover:text-amber-800"
+                >
+                  How It Works
+                </button>
+              </>
+            )}
           </nav>
 
           <div className="border-t border-stone-100 pt-3">

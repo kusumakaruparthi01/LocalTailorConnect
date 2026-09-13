@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, or } from 'drizzle-orm';
+import { and, desc, eq, inArray, ne, or } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { z } from 'zod';
 import { canAccessOrder, requireAccountType } from '../../server/authz.js';
@@ -71,8 +71,8 @@ async function publicTailors(includeOwnerId?: string, includeAll = false) {
     .where(includeAll
       ? undefined
       : includeOwnerId
-      ? or(eq(tailorProfiles.verificationStatus, 'verified'), eq(tailorProfiles.userId, includeOwnerId))
-      : eq(tailorProfiles.verificationStatus, 'verified'));
+        ? or(ne(tailorProfiles.verificationStatus, 'rejected'), eq(tailorProfiles.userId, includeOwnerId))
+        : ne(tailorProfiles.verificationStatus, 'rejected'));
 
   return Promise.all(rows.map(async ({ profile, owner }) => {
     const [services, portfolio, reviewRows] = await Promise.all([

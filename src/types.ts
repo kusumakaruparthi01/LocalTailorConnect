@@ -48,6 +48,7 @@ export interface Tailor {
   email: string;
   workingHours: string;
   isVerified: boolean;
+  verificationStatus?: 'pending' | 'verified' | 'rejected';
   specializations: string[];
   services: ServiceItem[];
   about: string;
