@@ -32,7 +32,7 @@ export const Navbar: React.FC = () => {
       <div className="max-w-7xl mx-auto px-6 lg:px-8 h-20 flex items-center justify-between">
         {/* Brand / Logo */}
         <button
-          onClick={() => setCurrentView('home')}
+          onClick={() => isAuthenticated ? navigateToDashboard() : setCurrentView('home')}
           className="flex items-center gap-3 text-left group focus:outline-none"
           aria-label="Local Tailor Connect Home"
         >
@@ -51,23 +51,13 @@ export const Navbar: React.FC = () => {
 
         {/* Desktop Navigation Links */}
         <nav className="hidden lg:flex items-center gap-8 xl:gap-10 text-sm font-medium text-stone-600">
-          <button
-            onClick={() => setCurrentView('home')}
-            className={`hover:text-stone-950 transition-colors ${
-              currentView === 'home' ? 'text-amber-800 font-semibold' : ''
-            }`}
-          >
-            Home
-          </button>
-          {(!isAuthenticated || currentUser?.role === 'customer') && (
+          {!isAuthenticated && (
             <>
               <button
-                onClick={() => setCurrentView('find-tailors')}
-                className={`hover:text-stone-950 transition-colors ${
-                  currentView === 'find-tailors' ? 'text-amber-800 font-semibold' : ''
-                }`}
+                onClick={() => setCurrentView('home')}
+                className={`hover:text-stone-950 transition-colors ${currentView === 'home' ? 'text-amber-800 font-semibold' : ''}`}
               >
-                Find Tailors
+                Home
               </button>
               <button
                 onClick={() => {
@@ -91,16 +81,33 @@ export const Navbar: React.FC = () => {
               >
                 How It Works
               </button>
+            </>
+          )}
+          {isAuthenticated && currentUser?.role === 'customer' && (
+            <>
+              <button
+                onClick={() => setCurrentView('find-tailors')}
+                className={`hover:text-stone-950 transition-colors ${currentView === 'find-tailors' ? 'text-amber-800 font-semibold' : ''}`}
+              >
+                Find Tailors
+              </button>
               <button
                 onClick={() => setCurrentView('smart-match')}
-                className={`hover:text-stone-950 transition-colors flex items-center gap-1.5 ${
-                  currentView === 'smart-match' ? 'text-amber-800 font-semibold' : ''
-                }`}
+                className={`hover:text-stone-950 transition-colors flex items-center gap-1.5 ${currentView === 'smart-match' ? 'text-amber-800 font-semibold' : ''}`}
               >
                 <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-                <span>Smart Match</span>
+                <span>Smart Search</span>
               </button>
             </>
+          )}
+          {isAuthenticated && (
+            <button
+              onClick={navigateToDashboard}
+              className="inline-flex items-center gap-2 rounded-xl bg-amber-800 px-4 py-2 text-white font-semibold hover:bg-amber-900 transition-colors"
+            >
+              <LayoutDashboard className="w-4 h-4" />
+              {currentUser?.role === 'tailor' ? 'Workshop Dashboard' : currentUser?.role === 'admin' ? 'Admin Dashboard' : 'Dashboard'}
+            </button>
           )}
         </nav>
 
@@ -204,35 +211,16 @@ export const Navbar: React.FC = () => {
       {mobileMenuOpen && (
         <div className="lg:hidden bg-white border-b border-stone-200 px-6 py-4 space-y-3 animate-in slide-in-from-top-2 duration-150">
           <nav className="flex flex-col space-y-2 text-sm font-medium text-stone-700">
-            <button
-              onClick={() => {
-                setCurrentView('home');
-                setMobileMenuOpen(false);
-              }}
-              className="text-left py-2 hover:text-amber-800"
-            >
-              Home
-            </button>
-            {(!isAuthenticated || currentUser?.role === 'customer') && (
+            {!isAuthenticated && (
               <>
                 <button
                   onClick={() => {
-                    setCurrentView('find-tailors');
+                    setCurrentView('home');
                     setMobileMenuOpen(false);
                   }}
                   className="text-left py-2 hover:text-amber-800"
                 >
-                  Find Tailors
-                </button>
-                <button
-                  onClick={() => {
-                    setCurrentView('smart-match');
-                    setMobileMenuOpen(false);
-                  }}
-                  className="text-left py-2 hover:text-amber-800 flex items-center gap-1.5"
-                >
-                  <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-                  <span>Smart Match</span>
+                  Home
                 </button>
                 <button
                   onClick={() => {
@@ -257,6 +245,29 @@ export const Navbar: React.FC = () => {
                   className="text-left py-2 hover:text-amber-800"
                 >
                   How It Works
+                </button>
+              </>
+            )}
+            {isAuthenticated && currentUser?.role === 'customer' && (
+              <>
+                <button
+                  onClick={() => {
+                    setCurrentView('find-tailors');
+                    setMobileMenuOpen(false);
+                  }}
+                  className="text-left py-2 hover:text-amber-800"
+                >
+                  Find Tailors
+                </button>
+                <button
+                  onClick={() => {
+                    setCurrentView('smart-match');
+                    setMobileMenuOpen(false);
+                  }}
+                  className="text-left py-2 hover:text-amber-800 flex items-center gap-1.5"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                  <span>Smart Search</span>
                 </button>
               </>
             )}

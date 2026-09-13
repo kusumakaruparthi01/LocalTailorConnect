@@ -21,6 +21,14 @@ import {
   Sparkles,
 } from 'lucide-react';
 
+const profileInitial = (name?: string) => name?.trim().charAt(0).toUpperCase() || 'T';
+const formatChatTime = (value: string) => {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? value
+    : date.toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
+};
+
 export const CustomerDashboard: React.FC = () => {
   const {
     customer,
@@ -57,6 +65,7 @@ export const CustomerDashboard: React.FC = () => {
 
   const currentChatTailor =
     tailors.find((t) => t.id === currentChatOrder?.tailorId);
+  const currentChatMessages = messages.filter((message) => message.orderId === currentChatOrder?.id);
 
   const handleSendChat = (e: React.FormEvent) => {
     e.preventDefault();
@@ -402,11 +411,9 @@ export const CustomerDashboard: React.FC = () => {
                 className="atelier-card rounded-3xl p-6 space-y-4 flex flex-col justify-between"
               >
                 <div className="flex items-center gap-4">
-                  <img
-                    src={t.avatar}
-                    alt={t.shopName}
-                    className="w-16 h-16 rounded-2xl object-cover border border-stone-200"
-                  />
+                  <div className="w-16 h-16 rounded-2xl bg-amber-100 text-amber-900 flex items-center justify-center text-xl font-bold border border-amber-200">
+                    {profileInitial(t.shopName)}
+                  </div>
                   <div>
                     <h3 className="font-serif font-bold text-base text-stone-900">{t.shopName}</h3>
                     <p className="text-xs text-stone-500">{t.address}, {t.city}</p>
@@ -484,6 +491,12 @@ export const CustomerDashboard: React.FC = () => {
             <h3 className="text-xs font-bold uppercase tracking-wider text-stone-500 px-2">
               Atelier Conversations
             </h3>
+            {customerOrders.length === 0 && (
+              <div className="rounded-2xl border border-dashed border-stone-300 p-5 text-center">
+                <MessageSquare className="w-6 h-6 text-stone-300 mx-auto mb-2" />
+                <p className="text-xs text-stone-500">Chats appear after you create an order with a tailor.</p>
+              </div>
+            )}
             {customerOrders.map((order) => {
               const t = tailors.find((tailor) => tailor.id === order.tailorId);
               if (!t) return null;
@@ -497,11 +510,9 @@ export const CustomerDashboard: React.FC = () => {
                     : 'hover:bg-stone-100'
                 }`}
               >
-                <img
-                  src={t.avatar}
-                  alt={t.shopName}
-                  className="w-11 h-11 rounded-xl object-cover"
-                />
+                <div className="w-11 h-11 rounded-xl bg-amber-100 text-amber-900 flex items-center justify-center text-sm font-bold shrink-0">
+                  {profileInitial(t.shopName)}
+                </div>
                 <div className="flex-1 min-w-0">
                   <h4 className="text-xs font-bold text-stone-900 truncate">{t.shopName}</h4>
                   <p className="text-[11px] text-stone-500 truncate">{order.garmentType} · {order.status}</p>
@@ -516,17 +527,14 @@ export const CustomerDashboard: React.FC = () => {
             {/* Chat header */}
             <div className="p-4 border-b border-stone-200 flex items-center justify-between bg-white">
               <div className="flex items-center gap-3">
-                <img
-                  src={currentChatTailor?.avatar}
-                  alt={currentChatTailor?.shopName || 'Tailor'}
-                  className="w-10 h-10 rounded-xl object-cover"
-                />
+                <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-900 flex items-center justify-center text-sm font-bold">
+                  {profileInitial(currentChatTailor?.shopName)}
+                </div>
                 <div>
                   <h4 className="font-serif font-bold text-sm text-stone-900">
                     {currentChatTailor?.shopName || 'Select an order'}
                   </h4>
-                  <span className="text-[10px] text-emerald-600 font-bold flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                  <span className="text-[10px] text-stone-500 font-bold flex items-center gap-1">
                     <span>{currentChatOrder ? `Order #${currentChatOrder.orderNumber || currentChatOrder.id}` : 'No conversation selected'}</span>
                   </span>
                 </div>
@@ -535,7 +543,19 @@ export const CustomerDashboard: React.FC = () => {
 
             {/* Chat messages */}
             <div className="p-5 space-y-3.5 overflow-y-auto max-h-80 flex-1 bg-stone-50/40">
-              {messages.filter((message) => message.orderId === currentChatOrder?.id).map((m) => {
+              {currentChatOrder && currentChatMessages.length === 0 && (
+                <div className="h-full min-h-48 flex flex-col items-center justify-center text-center">
+                  <MessageSquare className="w-8 h-8 text-stone-300 mb-2" />
+                  <p className="text-sm font-semibold text-stone-600">Start your conversation</p>
+                  <p className="text-xs text-stone-400 mt-1">Ask about measurements, fabric, or delivery.</p>
+                </div>
+              )}
+              {!currentChatOrder && (
+                <div className="h-full min-h-48 flex items-center justify-center text-xs text-stone-400">
+                  Select an order to open its conversation.
+                </div>
+              )}
+              {currentChatMessages.map((m) => {
                 const isMe = m.senderId === customer.id;
                 return (
                   <div
@@ -551,7 +571,9 @@ export const CustomerDashboard: React.FC = () => {
                     >
                       {m.text}
                     </div>
-                    <span className="text-[10px] text-stone-400 mt-1 px-1">{m.timestamp}</span>
+                    <span className="text-[10px] text-stone-400 mt-1 px-1">
+                      {isMe ? 'You' : m.senderName} · {formatChatTime(m.timestamp)}
+                    </span>
                   </div>
                 );
               })}
@@ -567,10 +589,12 @@ export const CustomerDashboard: React.FC = () => {
                 placeholder="Ask about neck depth, sleeve piping, fabric delivery..."
                 value={chatInput}
                 onChange={(e) => setChatInput(e.target.value)}
+                disabled={!currentChatOrder}
                 className="flex-1 text-xs p-3 border border-stone-200 rounded-xl focus:outline-none focus:border-amber-800"
               />
               <button
                 type="submit"
+                disabled={!currentChatOrder || !chatInput.trim()}
                 className="p-3 bg-amber-800 hover:bg-amber-900 text-white rounded-xl shadow-xs transition-colors"
               >
                 <Send className="w-4 h-4" />

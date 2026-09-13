@@ -18,6 +18,14 @@ import {
   Ruler,
 } from 'lucide-react';
 
+const customerInitial = (name?: string) => name?.trim().charAt(0).toUpperCase() || 'C';
+const formatChatTime = (value: string) => {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? value
+    : date.toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
+};
+
 export const TailorDashboard: React.FC = () => {
   const {
     currentUser,
@@ -51,6 +59,7 @@ export const TailorDashboard: React.FC = () => {
   const activeOrders = tailorOrders.filter((o) => o.status !== 'Completed');
   const [activeChatOrderId, setActiveChatOrderId] = useState('');
   const activeChatOrder = tailorOrders.find((order) => order.id === activeChatOrderId) || tailorOrders[0];
+  const activeChatMessages = messages.filter((message) => message.orderId === activeChatOrder?.id);
   const monthlyEarnings = tailorOrders
     .filter((order) => order.paymentStatus === 'Paid')
     .reduce((sum, order) => sum + order.totalAmount, 0);
@@ -408,18 +417,25 @@ export const TailorDashboard: React.FC = () => {
       {/* TAB 4: Client Messages */}
       {activeTab === 'chat' && (
         <div className="bg-white rounded-3xl border border-stone-200 shadow-xs overflow-hidden flex flex-col h-[500px]">
-          <div className="p-4 border-b border-stone-200 bg-stone-50">
-            <h3 className="font-serif font-bold text-base text-stone-900">
-              {activeChatOrder ? `Chat with ${activeChatOrder.customerName} (Order #${activeChatOrder.orderNumber || activeChatOrder.id})` : 'No customer conversations'}
-            </h3>
-            <span className="text-[11px] text-stone-500">
-              Respond directly to clarify fabric or measurement adjustments
-            </span>
+          <div className="p-4 border-b border-stone-200 bg-stone-50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-xl bg-amber-100 text-amber-900 flex items-center justify-center text-sm font-bold">
+                {customerInitial(activeChatOrder?.customerName)}
+              </div>
+              <div>
+                <h3 className="font-serif font-bold text-base text-stone-900">
+                  {activeChatOrder ? activeChatOrder.customerName : 'No customer conversations'}
+                </h3>
+                <span className="text-[11px] text-stone-500">
+                  {activeChatOrder ? `${activeChatOrder.garmentType} · Order #${activeChatOrder.orderNumber || activeChatOrder.id}` : 'New conversations appear with customer orders.'}
+                </span>
+              </div>
+            </div>
             {tailorOrders.length > 0 && (
               <select
                 value={activeChatOrder?.id || ''}
                 onChange={(event) => setActiveChatOrderId(event.target.value)}
-                className="mt-2 text-xs border border-stone-200 rounded-lg p-2 bg-white"
+                className="text-xs border border-stone-200 rounded-xl px-3 py-2.5 bg-white"
               >
                 {tailorOrders.map((order) => (
                   <option key={order.id} value={order.id}>{order.customerName} · {order.garmentType}</option>
@@ -429,7 +445,19 @@ export const TailorDashboard: React.FC = () => {
           </div>
 
           <div className="p-4 space-y-3 overflow-y-auto flex-1 bg-stone-50/30">
-            {messages.filter((message) => message.orderId === activeChatOrder?.id).map((m) => {
+            {activeChatOrder && activeChatMessages.length === 0 && (
+              <div className="h-full flex flex-col items-center justify-center text-center">
+                <MessageSquare className="w-8 h-8 text-stone-300 mb-2" />
+                <p className="text-sm font-semibold text-stone-600">No messages yet</p>
+                <p className="text-xs text-stone-400 mt-1">Send a welcome message or wait for the customer.</p>
+              </div>
+            )}
+            {!activeChatOrder && (
+              <div className="h-full flex items-center justify-center text-xs text-stone-400">
+                Customer conversations will appear here.
+              </div>
+            )}
+            {activeChatMessages.map((m) => {
               const isTailor = m.senderId === currentUser?.id;
               return (
                 <div
@@ -445,7 +473,9 @@ export const TailorDashboard: React.FC = () => {
                   >
                     {m.text}
                   </div>
-                  <span className="text-[10px] text-stone-400 mt-0.5 px-1">{m.timestamp}</span>
+                  <span className="text-[10px] text-stone-400 mt-0.5 px-1">
+                    {isTailor ? 'You' : m.senderName} · {formatChatTime(m.timestamp)}
+                  </span>
                 </div>
               );
             })}
@@ -460,10 +490,12 @@ export const TailorDashboard: React.FC = () => {
               placeholder="Send message to customer..."
               value={chatText}
               onChange={(e) => setChatText(e.target.value)}
+              disabled={!activeChatOrder}
               className="flex-1 text-xs p-2.5 border border-stone-200 rounded-xl focus:outline-none focus:border-amber-800"
             />
             <button
               type="submit"
+              disabled={!activeChatOrder || !chatText.trim()}
               className="p-2.5 bg-amber-800 hover:bg-amber-900 text-white rounded-xl shadow-xs transition-colors"
             >
               <Send className="w-4 h-4" />
